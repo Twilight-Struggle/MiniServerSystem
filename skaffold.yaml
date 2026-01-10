@@ -1,0 +1,71 @@
+apiVersion: skaffold/v4beta10
+kind: Config
+metadata:
+  name: miniserversystem-platform
+
+build:
+  local:
+    push: false
+  artifacts:
+    - image: gateway-bff
+      context: .
+      jib:
+        type: gradle
+        project: app:gateway-bff
+        args: ["--no-daemon"]
+    - image: account
+      context: .
+      jib:
+        type: gradle
+        project: app:account
+        args: ["--no-daemon"]
+    - image: entitlement
+      context: .
+      jib:
+        type: gradle
+        project: app:entitlement
+        args: ["--no-daemon"]
+    - image: matchmaking
+      context: .
+      jib:
+        type: gradle
+        project: app:matchmaking
+        args: ["--no-daemon"]
+    - image: notification
+      context: .
+      jib:
+        type: gradle
+        project: app:notification
+        args: ["--no-daemon"]
+
+deploy:
+  helm:
+    releases:
+      - name: miniserversystem-platform
+        chartPath: deploy/helm/miniserversystem-platform
+        namespace: miniserversystem
+        createNamespace: true
+        valuesFiles:
+          - deploy/helm/miniserversystem-platform/values-local.yaml
+        setValueTemplates:
+          services.gateway.image.repository: "{{.IMAGE_REPO_gateway_bff}}"
+          services.gateway.image.tag: "{{.IMAGE_TAG_gateway_bff}}"
+          services.account.image.repository: "{{.IMAGE_REPO_account}}"
+          services.account.image.tag: "{{.IMAGE_TAG_account}}"
+          services.entitlement.image.repository: "{{.IMAGE_REPO_entitlement}}"
+          services.entitlement.image.tag: "{{.IMAGE_TAG_entitlement}}"
+          services.matchmaking.image.repository: "{{.IMAGE_REPO_matchmaking}}"
+          services.matchmaking.image.tag: "{{.IMAGE_TAG_matchmaking}}"
+          services.notification.image.repository: "{{.IMAGE_REPO_notification}}"
+          services.notification.image.tag: "{{.IMAGE_TAG_notification}}"
+        setValues:
+          global.imagePullPolicy: IfNotPresent
+        wait: true
+        upgradeOnChange: true
+
+portForward:
+  - resourceType: service
+    resourceName: gateway
+    namespace: miniserversystem
+    port: 80
+    localPort: 18080

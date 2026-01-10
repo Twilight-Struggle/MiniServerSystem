@@ -1,0 +1,60 @@
+global:
+  imagePullPolicy: IfNotPresent
+
+app:
+  gateway:
+    enabled: true
+    image: { repository: gateway-bff, tag: ci }
+    port: 8080
+    servicePort: 80
+    env:
+      SPRING_PROFILES_ACTIVE: ci
+
+  account:
+    enabled: true
+    image: { repository: account, tag: ci }
+    port: 8080
+    servicePort: 80
+    env:
+      SPRING_PROFILES_ACTIVE: ci
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: game
+      POSTGRES_USER: game
+      POSTGRES_PASSWORD: game
+
+  entitlement:
+    enabled: true
+    image: { repository: entitlement, tag: ci }
+    port: 8080
+    servicePort: 80
+    env:
+      SPRING_PROFILES_ACTIVE: ci
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: game
+      POSTGRES_USER: game
+      POSTGRES_PASSWORD: game
+      NATS_URL: nats://nats:4222
+
+  matchmaking:
+    enabled: true
+    image: { repository: matchmaking, tag: ci }
+    port: 8080
+    servicePort: 80
+    env:
+      SPRING_PROFILES_ACTIVE: ci
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      NATS_URL: nats://nats:4222
+
+  notification:
+    enabled: true
+    image: { repository: notification, tag: ci }
+    port: 8080
+    servicePort: 80
+    env:
+      SPRING_PROFILES_ACTIVE: ci
+
+ingress:
+  enabled: false

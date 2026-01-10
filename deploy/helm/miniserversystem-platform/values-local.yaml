@@ -1,0 +1,67 @@
+global:
+  imagePullPolicy: IfNotPresent
+
+app:
+  gateway:
+    enabled: true
+    image: { repository: gateway-bff, tag: dev }
+    port: 8080
+    servicePort: 80
+    env:
+      SPRING_PROFILES_ACTIVE: local
+      ACCOUNT_BASE_URL: http://account:80
+      ENTITLEMENT_BASE_URL: http://entitlement:80
+      MATCHMAKING_BASE_URL: http://matchmaking:80
+      NOTIFICATION_BASE_URL: http://notification:80
+
+  account:
+    enabled: true
+    image: { repository: account, tag: dev }
+    port: 8080
+    servicePort: 80
+    env:
+      SPRING_PROFILES_ACTIVE: local
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: game
+      POSTGRES_USER: game
+      POSTGRES_PASSWORD: game
+
+  entitlement:
+    enabled: true
+    image: { repository: entitlement, tag: dev }
+    port: 8080
+    servicePort: 80
+    env:
+      SPRING_PROFILES_ACTIVE: local
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: game
+      POSTGRES_USER: game
+      POSTGRES_PASSWORD: game
+      NATS_URL: nats://nats:4222
+
+  matchmaking:
+    enabled: true
+    image: { repository: matchmaking, tag: dev }
+    port: 8080
+    servicePort: 80
+    env:
+      SPRING_PROFILES_ACTIVE: local
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      NATS_URL: nats://nats:4222
+
+  notification:
+    enabled: true
+    image: { repository: notification, tag: dev }
+    port: 8080
+    servicePort: 80
+    env:
+      SPRING_PROFILES_ACTIVE: local
+      NATS_URL: nats://nats:4222
+
+ingress:
+  enabled: true
+  host: localhost
+  path: /
