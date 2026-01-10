@@ -1,0 +1,108 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: ["main"]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Unit tests
+        run: ./gradlew test
+
+  e2e:
+    name: E2E (kind + k8s deploy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: unit
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: mss
+          wait: 120s
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v4.0.4
+
+      - name: Build images (Jib -> local Docker)
+        run: |
+          set -eux
+          # deploy/helm/miniserversystem-platform/values-ci.yaml が tag=ci を前提
+          ./gradlew :app:gateway-bff:jibDockerBuild  -Djib.to.image=gateway-bff:ci
+          ./gradlew :app:account:jibDockerBuild      -Djib.to.image=account:ci
+          ./gradlew :app:entitlement:jibDockerBuild  -Djib.to.image=entitlement:ci
+          ./gradlew :app:matchmaking:jibDockerBuild  -Djib.to.image=matchmaking:ci
+          ./gradlew :app:notification:jibDockerBuild -Djib.to.image=notification:ci
+
+      - name: Load images into kind
+        run: |
+          set -eux
+          kind load docker-image --name mss gateway-bff:ci
+          kind load docker-image --name mss account:ci
+          kind load docker-image --name mss entitlement:ci
+          kind load docker-image --name mss matchmaking:ci
+          kind load docker-image --name mss notification:ci
+
+      - name: Deploy infra (kustomize overlay ci)
+        run: |
+          set -eux
+          # deploy/kustomize/infra/overlays/ci は Postgres を emptyDir にする
+          kubectl apply -k deploy/kustomize/infra/overlays/ci
+
+          kubectl -n miniserversystem rollout status deploy/redis --timeout=180s
+          kubectl -n miniserversystem rollout status deploy/nats  --timeout=180s
+          kubectl -n miniserversystem rollout status statefulset/postgres --timeout=180s
+
+      - name: Deploy apps (Helm values-ci.yaml)
+        run: |
+          set -eux
+          helm upgrade --install miniserversystem-platform deploy/helm/miniserversystem-platform \
+            -n miniserversystem --create-namespace \
+            -f deploy/helm/miniserversystem-platform/values-ci.yaml \
+            --wait --timeout 5m
+
+      - name: E2E (health checks + diagnostics)
+        run: |
+          set -eux
+          chmod +x script/e2e/run.sh
+          ./script/e2e/run.sh \
+            --namespace miniserversystem \
+            --gateway-service gateway \
+            --local-port 18080
