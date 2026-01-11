@@ -31,6 +31,49 @@ jobs:
       - name: Unit tests
         run: ./gradlew test
 
+  migrate-check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: miniserversystem
+          POSTGRES_USER: miniserversystem
+          POSTGRES_PASSWORD: miniserversystem
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U miniserversystem -d miniserversystem"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Flyway migrate (entitlement)
+        run: |
+          docker run --rm --network host \
+            -v "$PWD/app/entitlement/src/main/resources/db/migration:/flyway/sql" \
+            flyway/flyway:latest \
+            -url="jdbc:postgresql://127.0.0.1:5432/miniserversystem" \
+            -user="miniserversystem" -password="miniserversystem" \
+            -schemas="entitlement" \
+            -table="flyway_schema_history_entitlement" \
+            -createSchemas=true \
+            migrate
+
+      - name: Flyway migrate (notification)
+        run: |
+          docker run --rm --network host \
+            -v "$PWD/app/notification/src/main/resources/db/migration:/flyway/sql" \
+            flyway/flyway:latest \
+            -url="jdbc:postgresql://127.0.0.1:5432/miniserversystem" \
+            -user="miniserversystem" -password="miniserversystem" \
+            -schemas="notification" \
+            -table="flyway_schema_history_notification" \
+            -createSchemas=true \
+            migrate
+
   e2e:
     name: E2E (kind + k8s deploy)
     runs-on: ubuntu-latest

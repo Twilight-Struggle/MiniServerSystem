@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:postgres}:${POSTGRES_PORT:5432}/${POSTGRES_DB:miniserversystem}
+    username: ${POSTGRES_USER:miniserversystem}
+    password: ${POSTGRES_PASSWORD:miniserversystem}
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+    create-schemas: true
+    default-schema: notification
+    schemas: notification
+    table: flyway_schema_history_notification
+
+    connect-retries: 30
+    connect-retries-interval: 2s

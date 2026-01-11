@@ -19,9 +19,9 @@ app:
       SPRING_PROFILES_ACTIVE: ci
       POSTGRES_HOST: postgres
       POSTGRES_PORT: "5432"
-      POSTGRES_DB: game
-      POSTGRES_USER: game
-      POSTGRES_PASSWORD: game
+      POSTGRES_DB: miniserversystem
+      POSTGRES_USER: miniserversystem
+      POSTGRES_PASSWORD: miniserversystem
 
   entitlement:
     enabled: true
@@ -32,9 +32,9 @@ app:
       SPRING_PROFILES_ACTIVE: ci
       POSTGRES_HOST: postgres
       POSTGRES_PORT: "5432"
-      POSTGRES_DB: game
-      POSTGRES_USER: game
-      POSTGRES_PASSWORD: game
+      POSTGRES_DB: miniserversystem
+      POSTGRES_USER: miniserversystem
+      POSTGRES_PASSWORD: miniserversystem
       NATS_URL: nats://nats:4222
 
   matchmaking:
@@ -55,6 +55,12 @@ app:
     servicePort: 80
     env:
       SPRING_PROFILES_ACTIVE: ci
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: miniserversystem
+      POSTGRES_USER: miniserversystem
+      POSTGRES_PASSWORD: miniserversystem
+      NATS_URL: nats://nats:4222
 
 ingress:
   enabled: false
