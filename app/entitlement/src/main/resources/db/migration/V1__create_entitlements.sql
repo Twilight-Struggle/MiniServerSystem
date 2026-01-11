@@ -6,7 +6,7 @@ CREATE TABLE entitlements (
   granted_at  TIMESTAMPTZ,
   revoked_at  TIMESTAMPTZ,
 
-  source      TEXT,          -- purchase/refund/admin etc
+  source      TEXT,          -- purchase/refund/admin etc なぜ付与されたか後で分かる
   source_id   TEXT,          -- purchase_id etc
 
   version     BIGINT NOT NULL DEFAULT 0,   -- 更新ごとに+1
