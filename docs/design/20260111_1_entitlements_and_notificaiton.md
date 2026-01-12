@@ -150,7 +150,7 @@ WHERE event_id = $1 AND locked_by = $2;
 ```
 バックオフは指数バックオフ+ジッター
 
-base=1s, cap=60s、delay = min(cap, base * 2^attempt) * (0.5 + rand())
+base=1s, cap=60s、delay = min(cap, base * 2^(attempt - 1)) * (0.5 + rand())
 
 #### NATSのイベント
 protocol bufferを使用
@@ -171,12 +171,104 @@ protocol bufferを使用
 
 ## Notification app
 とりあえず通知をDBに保存するところまで
+### テスト方針
+- Testcontainers の Postgres で統一する(test プロファイル)。
 ### 動作
 - NATSから冪等性を確保(idem, event_id)しつつイベントをsubscribe
+- Notification appはJetStreamのdurable consumerで購読し、処理成功時に明示ackする（設定: `notification.nats.stream` / `notification.nats.durable`）
+- 受信/デバッグ時のペイロード解析失敗は具体例外(InvalidProtocolBufferException/JsonProcessingException)を捕捉し、失敗扱いにする
 - 通知レコードを保存(通知を模擬) SENTまでの状態遷移
 - 失敗時リトライ、完全失敗時はDLQ
 - claimを利用
 
+### 配信のclaim/lease
+複数ワーカーで同一通知を処理しないために、PENDING と lease 期限切れの PROCESSING を claim する。
+`locked_by` はホスト名を使用し、`HOSTNAME` 環境変数を優先、未設定時は `InetAddress.getLocalHost().getHostName()` にフォールバックする。
+
+```sql
+WITH cte AS (
+  SELECT notification_id
+  FROM notifications
+  WHERE (
+    status = 'PENDING'
+    AND (next_retry_at IS NULL OR next_retry_at <= now())
+  )
+  OR (
+    status = 'PROCESSING'
+    AND (lease_until IS NULL OR lease_until <= now())  -- リース切れ回収
+  )
+  ORDER BY created_at
+  LIMIT $1
+  FOR UPDATE SKIP LOCKED
+)
+UPDATE notifications n
+SET
+  status = 'PROCESSING',
+  locked_by = $2,         -- ホスト名
+  locked_at = now(),
+  lease_until = now() + interval '30 seconds'
+FROM cte
+WHERE n.notification_id = cte.notification_id
+RETURNING n.notification_id, n.event_id, n.payload_json, n.attempt_count;
+```
+
+送信成功:
+```sql
+UPDATE notifications
+SET
+  status = 'SENT',
+  sent_at = now(),
+  next_retry_at = NULL,
+  locked_by = NULL,
+  locked_at = NULL,
+  lease_until = NULL
+WHERE notification_id = $1 AND locked_by = $2 AND status = 'PROCESSING';
+```
+
+失敗時:
+```sql
+UPDATE notifications
+SET
+  attempt_count = attempt_count + 1,
+  status = CASE WHEN attempt_count + 1 >= $max_attempt THEN 'FAILED' ELSE 'PENDING' END,
+  next_retry_at = CASE WHEN attempt_count + 1 >= $max_attempt
+                 THEN NULL
+                 ELSE now() + make_interval(secs => $backoff_seconds)
+                 END,
+  locked_by = NULL,
+  locked_at = NULL,
+  lease_until = NULL
+WHERE notification_id = $1 AND locked_by = $2 AND status = 'PROCESSING';
+```
+
+### Notification 配信の運用パラメータ
+- poll interval：1s
+- batch size：50
+- lease：30s
+- max_attempt：10
+- backoff base：1s
+- backoff max：60s
+- backoff exponent base：2.0
+- backoff jitter min：0.5
+- backoff jitter max：1.5
+- backoff min：1s
+- error message max length：1000
+- initial attempt count：0
+
+### クリーンアップ方針
+- processed_events: processed_at が 30日より古いものを削除する
+- processed_events: threshold と同時刻の行は削除せず残す（processed_at < threshold のみ削除）
+- notifications: created_at が 30日より古く、status が SENT/FAILED のみ削除する
+- PENDING/PROCESSING が 30日より古い場合は異常としてエラーログを出し、削除せずに残す
+- 実行間隔: 1h (cleanup-interval-ms=3600000)
+- 設定キー: notification.retention.enabled / notification.retention.retention-days / notification.retention.cleanup-interval-ms
+
 ### デバッグ用API
 外部に送信を作らないため、動作確認用のAPIが必要
 GET /debug/notification/inbox/{user_id}
+
+### 端折った部分
+NATSのMaxDeliverを超えた場合、Subscriber未処理のDLQに送る必要がある
+これはDBに障害が発生したときに起きうる
+MaxDeliver advisory等で、規定数を超えた場合未処理DLQに送る必要がある
+復旧後、DLQからもとのキューに戻すオペレーションを行えば処理が再開される

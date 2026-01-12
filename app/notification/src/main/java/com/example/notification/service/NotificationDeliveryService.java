@@ -1,0 +1,136 @@
+/*
+ * どこで: Notification サービス層
+ * 何を: PENDING 通知の送信とリトライ/DLQ を処理する
+ * なぜ: 通知の最終状態を制御し運用介入を可能にするため
+ */
+package com.example.notification.service;
+
+import com.example.notification.config.NotificationDeliveryProperties;
+import com.example.notification.model.NotificationRecord;
+import com.example.notification.repository.NotificationDlqRepository;
+import com.example.notification.repository.NotificationRepository;
+import com.google.common.annotations.VisibleForTesting;
+
+import lombok.RequiredArgsConstructor;
+
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.time.Clock;
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
+import org.springframework.stereotype.Service;
+
+@Service
+@RequiredArgsConstructor
+public class NotificationDeliveryService {
+
+    private static final Logger logger = LoggerFactory.getLogger(NotificationDeliveryService.class);
+    private static final String HOSTNAME_ENV = "HOSTNAME";
+    private static final String DEFAULT_HOSTNAME = "unknown-host";
+
+    private final NotificationRepository notificationRepository;
+    private final NotificationDlqRepository notificationDlqRepository;
+    private final NotificationSender sender;
+    private final NotificationDeliveryProperties properties;
+    private final Clock clock;
+
+    public void processPendingBatch() {
+        Instant now = Instant.now(clock);
+        String lockedBy = resolveLockedBy();
+        Instant leaseUntil = now.plusSeconds(properties.leaseSeconds());
+        // claim を単一 SQL で行い、送信 IO を長期トランザクションに載せない
+        List<NotificationRecord> pending = notificationRepository.claimPendingForUpdate(
+                properties.batchSize(),
+                now,
+                leaseUntil,
+                lockedBy);
+        for (NotificationRecord record : pending) {
+            try {
+                sender.send(record);
+                int updated = notificationRepository.markSent(record.notificationId(), now, lockedBy);
+                if (updated == 0) {
+                    logger.warn("notification sent but lock was lost id={} eventId={}",
+                            record.notificationId(),
+                            record.eventId());
+                }
+            } catch (DataAccessException ex) {
+                handleFailure(record, ex, now, lockedBy);
+            } catch (RuntimeException ex) {
+                handleFailure(record, ex, now, lockedBy);
+            }
+        }
+    }
+
+    @VisibleForTesting
+    void handleFailure(NotificationRecord record, RuntimeException ex, Instant now, String lockedBy) {
+        int nextAttempt = record.attemptCount() + 1;
+        if (nextAttempt >= properties.maxAttempts()) {
+            // 最大試行超過は DLQ に隔離して運用介入できるようにする
+            notificationDlqRepository.insert(
+                    UUID.randomUUID(),
+                    record.notificationId(),
+                    record.eventId(),
+                    record.payloadJson(),
+                    truncateError(ex.getMessage()),
+                    now);
+            int updated = notificationRepository.markRetry(record.notificationId(), nextAttempt, null, true, lockedBy);
+            if (updated == 0) {
+                logger.warn("notification moved to DLQ but lock was lost id={} eventId={}",
+                        record.notificationId(),
+                        record.eventId());
+            }
+            logger.warn("notification moved to DLQ id={} eventId={}", record.notificationId(), record.eventId(), ex);
+            return;
+        }
+        long backoffSeconds = computeBackoffSeconds(nextAttempt);
+        Instant nextRetryAt = now.plusSeconds(backoffSeconds);
+        int updated = notificationRepository.markRetry(record.notificationId(), nextAttempt, nextRetryAt, false,
+                lockedBy);
+        if (updated == 0) {
+            logger.warn("notification retry skipped because lock was lost id={} attempt={}",
+                    record.notificationId(),
+                    nextAttempt);
+        }
+        logger.warn("notification retry scheduled id={} attempt={}", record.notificationId(), nextAttempt, ex);
+    }
+
+    @VisibleForTesting
+    long computeBackoffSeconds(int attempt) {
+        double exp = properties.backoffBaseSeconds() * Math.pow(properties.backoffExponentBase(), (attempt - 1));
+        double capped = Math.min(exp, properties.backoffMaxSeconds());
+        double jitterMin = properties.backoffJitterMin();
+        double jitterMax = properties.backoffJitterMax();
+        double jitter = jitterMin + ThreadLocalRandom.current().nextDouble() * (jitterMax - jitterMin);
+        return Math.max(properties.backoffMinSeconds(), (long) Math.ceil(capped * jitter));
+    }
+
+    private String truncateError(String message) {
+        if (message == null) {
+            return "unknown error";
+        }
+        int maxLength = properties.errorMessageMaxLength();
+        if (message.length() <= maxLength) {
+            return message;
+        }
+        return message.substring(0, maxLength);
+    }
+
+    @VisibleForTesting
+    String resolveLockedBy() {
+        String env = System.getenv(HOSTNAME_ENV);
+        if (env != null && !env.isBlank()) {
+            return env;
+        }
+        try {
+            return InetAddress.getLocalHost().getHostName();
+        } catch (UnknownHostException | SecurityException ex) {
+            logger.warn("failed to resolve hostname; fallback to {}", DEFAULT_HOSTNAME, ex);
+            return DEFAULT_HOSTNAME;
+        }
+    }
+}
