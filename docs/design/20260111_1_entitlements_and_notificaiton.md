@@ -47,7 +47,7 @@
   "user_id": "u_123",
   "stock_keeping_unit": "item1",
   "reason": "refund",
-  "purchase_id": "p_456"
+  "purchase_id": "p_457"
 }
 ```
 - response
@@ -78,21 +78,48 @@ GET /v1/users/{user_id}/entitlements
 }
 ```
 
+#### エラー応答
+同じ HTTP ステータスでも原因を区別するため、エラーコードを返す。
+
+```json
+{
+  "code": "ENTITLEMENT_STATE_CONFLICT",
+  "message": "already ACTIVE"
+}
+```
+
+- `IDEMPOTENCY_KEY_CONFLICT`: 同一 Idempotency-Key で異なるリクエスト
+- `ENTITLEMENT_STATE_CONFLICT`: 既に同じ状態（ACTIVE/REVOKED）で更新不可
+- `BAD_REQUEST`: 入力不正
+  - 入力検証は jakarta.validation / 標準例外で行い、ApiExceptionHandler で ApiErrorResponse に整形する。
+
 #### idempotency_keys
 APIの再送ではこのテーブルに保存された結果を用いて同一の結果を返す。
 同一キーで異なるリクエストが来た場合は409。
 TTLは24h。
+失敗応答（エラーコードとメッセージ）も保存し、再送時に同じエラーを返す。
+同一Idempotency-Keyの同時実行はトランザクション内の 64-bit Advisory Lock（pg_advisory_xact_lock(bigint)）で直列化し、
+ロックキーは Idempotency-Key を SHA-256 でハッシュし、先頭 8byte を long に変換して生成する。
+競合判定はロック取得後の未期限切れ `idempotency_keys` の確認に集約し、保存段階では競合を扱わない。
+保存は「期限切れのみ更新するUPSERT」とし、未期限切れで更新されない場合は
+先頭の競合判定をすり抜けた不変条件違反として内部エラー扱いとする。
+
+#### retention cleanup
+idempotency_keys は expires_at <= now() を削除する。
+outbox_events は status=PUBLISHED かつ published_at が TTL(24h) を過ぎたものだけ削除する。
+削除ワーカーは 1h 間隔で実行する。
 
 #### entitlement_audit
 操作履歴を保存しておく。でかくなるのを防ぐにはdetailを小さくし、月次パーティショニングなどを行う。
 
 ### NATSへのpublish
 - status=PENDING かつ next_retry_at <= now() を一定件数取得
-- Broker に publish(メッセージキーに event_id を入れる)
-- 成功したら PUBLISHED、失敗したら attempt_count++ と next_retry_at を指数バックオフで更新
+- Broker に publish(NATS headerに event_id を入れる)
+- 成功したら PUBLISHED、失敗したらアプリ側で次回の attempt_count を計算し、next_retry_at も指数バックオフで計算して更新
 - attempt_count が閾値超えたら FAILED(運用介入)
+- ペイロード解析失敗はリトライで回復しないため即時 FAILED とし、アラート対象にする
 
-#### 複数Podがpublishする運用 ?
+#### 複数Podがpublishする運用
 claim(ロック)→ publish → finalize の3段階にする
 ```sql
 WITH cte AS (
@@ -101,12 +128,12 @@ WITH cte AS (
   WHERE
     (
       status = 'PENDING'
-      AND (next_retry_at IS NULL OR next_retry_at <= now())
+      AND (next_retry_at IS NULL OR next_retry_at <= :now)
     )
     OR
     (
       status = 'IN_FLIGHT'
-      AND lease_until <= now()          -- リース切れ回収
+      AND (lease_until IS NULL OR lease_until <= :now)          -- リース切れ回収
     )
   ORDER BY created_at
   LIMIT $1
@@ -134,23 +161,20 @@ SET
 WHERE event_id = $1 AND locked_by = $2;
 
 ```
-→失敗時
+→失敗時（attempt_count/status/next_retry_at はアプリ側で計算した値を渡す）
 ```sql
 UPDATE outbox_events
 SET
-  attempt_count = attempt_count + 1,
-  status = CASE WHEN attempt_count + 1 >= $max_attempt THEN 'FAILED' ELSE 'PENDING' END,
-  next_retry_at = CASE WHEN attempt_count + 1 >= $max_attempt
-                 THEN NULL
-                 ELSE now() + make_interval(secs => $backoff_seconds)
-                 END,
+  attempt_count = $attemptCount,
+  status = $status,
+  next_retry_at = $nextRetryAt,
   lease_until = NULL,
   last_error = $err
 WHERE event_id = $1 AND locked_by = $2;
 ```
 バックオフは指数バックオフ+ジッター
 
-base=1s, cap=60s、delay = min(cap, base * 2^attempt) * (0.5 + rand())
+base=1s, cap=60s、delay = min(cap, base * 2^(attempt - 1)) * (0.5 + rand())
 
 #### NATSのイベント
 protocol bufferを使用
@@ -163,20 +187,148 @@ protocol bufferを使用
 - source_id
 - version(entitlementsのversion。将来の整合性検証に効く)
 
+#### NATS 設定
+- entitlement.nats.subject: 必須 (publish 先 subject)
+- entitlement.nats.stream: 必須 (JetStream stream 名)
+- entitlement.nats.duplicate-window: Nats-Msg-Id の重複排除窓
+
 #### 運用パラメータ
 - poll interval：200ms〜1s(小規模なら1sで十分)
 - batch size：50〜200(ローカルは50)
 - lease：30s(publishが遅い場合は延長)
 - max_attempt：10(とりあえずは10で十分)
 
+#### マジックナンバー一覧
+- entitlement.outbox.poll-interval-ms: 1000
+- entitlement.outbox.batch-size: 50
+- entitlement.outbox.max-attempts: 10
+- entitlement.outbox.backoff-base-seconds: 1
+- entitlement.outbox.backoff-max-seconds: 60
+- entitlement.idempotency.ttl-hours: 24
+- entitlement.outbox.published-ttl-hours: 24
+- entitlement.retention.cleanup-interval-ms: 3600000
+- entitlement.outbox.backoff-exponent-base: 2.0
+- entitlement.outbox.backoff-jitter-min: 0.5
+- entitlement.outbox.backoff-jitter-max: 1.5
+- entitlement.outbox.backoff-min-seconds: 1
+- entitlement.outbox.error-message-max-length: 1000
+- entitlement.outbox.lease-seconds: 30
+- entitlement.nats.duplicate-window: 2m
+
 ## Notification app
 とりあえず通知をDBに保存するところまで
+### テスト方針
+- Testcontainers の Postgres で統一する(test プロファイル)。
 ### 動作
 - NATSから冪等性を確保(idem, event_id)しつつイベントをsubscribe
+- Notification appはJetStreamのdurable consumerで購読し、処理成功時に明示ackする（設定: `notification.nats.stream` / `notification.nats.durable`）
+- Notification appは起動時に stream を作成し、Nats-Msg-Id 重複排除のため duplicate-window を指定する
+- 受信/デバッグ時のペイロード解析失敗や不正payloadは恒久的失敗として ack で破棄する(InvalidProtocolBufferException/JsonProcessingException など)
 - 通知レコードを保存(通知を模擬) SENTまでの状態遷移
 - 失敗時リトライ、完全失敗時はDLQ
+- DLQは通知単位で一意（notification_id で一意制約）。二重登録は握りつぶす（ON CONFLICT DO NOTHING）
 - claimを利用
+
+#### マジックナンバー一覧
+- notification.nats.duplicate-window: 2m
+
+### 配信のclaim/lease
+複数ワーカーで同一通知を処理しないために、PENDING と lease 期限切れの PROCESSING を claim する。
+`locked_by` はホスト名を使用し、`HOSTNAME` 環境変数を優先、未設定時は `InetAddress.getLocalHost().getHostName()` にフォールバックする。
+
+```sql
+WITH cte AS (
+  SELECT notification_id
+  FROM notifications
+  WHERE (
+    status = 'PENDING'
+    AND (next_retry_at IS NULL OR next_retry_at <= now())
+  )
+  OR (
+    status = 'PROCESSING'
+    AND (lease_until IS NULL OR lease_until <= now())  -- リース切れ回収
+  )
+  ORDER BY created_at
+  LIMIT $1
+  FOR UPDATE SKIP LOCKED
+)
+UPDATE notifications n
+SET
+  status = 'PROCESSING',
+  locked_by = $2,         -- ホスト名
+  locked_at = now(),
+  lease_until = now() + interval '30 seconds'
+FROM cte
+WHERE n.notification_id = cte.notification_id
+RETURNING n.notification_id, n.event_id, n.payload_json, n.attempt_count;
+```
+
+送信成功:
+```sql
+UPDATE notifications
+SET
+  status = 'SENT',
+  sent_at = now(),
+  next_retry_at = NULL,
+  locked_by = NULL,
+  locked_at = NULL,
+  lease_until = NULL
+WHERE notification_id = $1 AND locked_by = $2 AND status = 'PROCESSING';
+```
+
+失敗時（attempt_count/status/next_retry_at はアプリ側で計算した値を渡す）:
+```sql
+UPDATE notifications
+SET
+  attempt_count = $attemptCount,
+  status = $status,
+  next_retry_at = $nextRetryAt,
+  locked_by = NULL,
+  locked_at = NULL,
+  lease_until = NULL
+WHERE notification_id = $1 AND locked_by = $2 AND status = 'PROCESSING';
+```
+
+### Notification 配信の運用パラメータ
+- poll interval：1s
+- batch size：50
+- lease：30s
+- max_attempt：10
+- backoff base：1s
+- backoff max：60s
+- backoff exponent base：2.0
+- backoff jitter min：0.5
+- backoff jitter max：1.5
+- backoff min：1s
+- error message max length：1000
+- initial attempt count：0
+
+### クリーンアップ方針
+- processed_events: processed_at が 30日より古いものを削除する
+- processed_events: threshold と同時刻の行は削除せず残す（processed_at < threshold のみ削除）
+- notifications: created_at が 30日より古く、status が SENT/FAILED のみ削除する
+- PENDING/PROCESSING が 30日より古い場合は異常としてエラーログを出し、削除せずに残す
+- 実行間隔: 1h (cleanup-interval-ms=3600000)
+- 設定キー: notification.retention.enabled / notification.retention.retention-days / notification.retention.cleanup-interval-ms
 
 ### デバッグ用API
 外部に送信を作らないため、動作確認用のAPIが必要
 GET /debug/notification/inbox/{user_id}
+
+### 端折った部分
+#### NATSの毒メッセージ
+処理不能なメッセージがある場合、無限に再配信される
+またNATSのMaxDeliverを超えた場合、Subscriber未処理のDLQに送る必要がある
+これはDBに障害が発生したときに起きうる
+MaxDeliver advisory等で、規定数を超えた場合未処理DLQに送る必要がある
+復旧後、DLQからもとのキューに戻すオペレーションを行えば処理が再開される
+
+#### 外部送信の冪等性
+外部送信はログのみの実装
+実際にはidempotency keyなどで冪等性を確保する必要がある
+
+## テスト
+- `./gradlew test` は Docker が必要（Testcontainers で Postgres を起動）
+- Spring のコンテキストキャッシュと整合するよう、テスト用 Postgres は JVM 内で起動したまま共有する
+- PostgreSQL JDBC の型推論を避けるため、通知の JDBC 経由の日時は Timestamp へ変換して投入する
+- Entitlement のテストは `spring-boot-starter-test` で完結し、追加の WebMVC テスト starter は不要
