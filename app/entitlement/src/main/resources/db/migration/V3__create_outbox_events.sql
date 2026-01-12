@@ -1,3 +1,6 @@
+-- どこで: Entitlement マイグレーション
+-- 何を: outbox_events テーブルと索引を作成する
+-- なぜ: publish/claim とリトライを効率化するため
 CREATE TABLE outbox_events (
   event_id      UUID PRIMARY KEY,
   event_type    TEXT NOT NULL,          -- EntitlementGranted / EntitlementRevoked
@@ -23,6 +26,12 @@ CREATE TABLE outbox_events (
 CREATE INDEX outbox_pick_idx
   ON outbox_events (status, next_retry_at, created_at);
 
--- 分析/追跡用
-CREATE INDEX outbox_created_idx ON outbox_events (created_at);
-CREATE INDEX outbox_aggregate_idx ON outbox_events (aggregate_key, created_at);
+-- IN_FLIGHT のリース切れ回収を効率化する
+CREATE INDEX outbox_inflight_lease_idx
+  ON outbox_events (lease_until, created_at)
+  WHERE status = 'IN_FLIGHT';
+
+-- PUBLISHED の期限切れ削除を効率化する
+CREATE INDEX outbox_published_at_idx
+  ON outbox_events (published_at)
+  WHERE status = 'PUBLISHED';

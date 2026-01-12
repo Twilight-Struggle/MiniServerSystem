@@ -1,3 +1,6 @@
+-- どこで: Entitlement マイグレーション
+-- 何を: entitlements テーブルと索引を作成する
+-- なぜ: 付与/剥奪の状態管理と参照を効率化するため
 CREATE TABLE entitlements (
   user_id     TEXT   NOT NULL,
   stock_keeping_unit         TEXT   NOT NULL,
@@ -15,10 +18,5 @@ CREATE TABLE entitlements (
   PRIMARY KEY (user_id, stock_keeping_unit)
 );
 
--- 参照頻度が高い想定なので user_id で引ける索引は必須
-CREATE INDEX entitlements_user_idx ON entitlements (user_id);
-
--- ACTIVEだけを頻繁に取るなら部分索引も有効
-CREATE INDEX entitlements_user_active_idx
-  ON entitlements (user_id, stock_keeping_unit)
-  WHERE status = 'ACTIVE';
+CREATE INDEX entitlements_user_updated_idx
+  ON entitlements (user_id, updated_at DESC);

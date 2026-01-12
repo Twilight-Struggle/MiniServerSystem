@@ -141,6 +141,17 @@ jobs:
             -f deploy/helm/miniserversystem-platform/values-ci.yaml \
             --wait --timeout 5m
 
+      - name: Dump diagnostics (on failure)
+        if: failure()
+        run: |
+          set -euxo pipefail
+          kubectl get pods -n miniserversystem -o wide
+          kubectl describe deploy entitlement -n miniserversystem || true
+          kubectl describe deploy notification -n miniserversystem || true
+          kubectl get events -n miniserversystem --sort-by=.metadata.creationTimestamp || true
+          kubectl logs -n miniserversystem deploy/entitlement --tail=200 || true
+          kubectl logs -n miniserversystem deploy/notification --tail=200 || true
+
       - name: E2E (health checks + diagnostics)
         run: |
           set -eux

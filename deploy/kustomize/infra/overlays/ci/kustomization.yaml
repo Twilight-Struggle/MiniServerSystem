@@ -2,3 +2,4 @@ resources:
   - ../../base
 patches:
   - path: postgres-ephemeral.yaml
+  - path: nats-ephemeral.yaml

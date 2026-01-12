@@ -1,0 +1,13 @@
+spring:
+  config.activate.on-profile: test
+  flyway:
+    enabled: false
+
+nats:
+  enabled: false
+
+notification:
+  retention:
+    enabled: false
+  delivery:
+    enabled: false

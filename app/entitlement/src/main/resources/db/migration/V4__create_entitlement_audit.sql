@@ -1,3 +1,6 @@
+-- どこで: Entitlement マイグレーション
+-- 何を: entitlement_audit テーブルを作成する
+-- なぜ: 付与/剥奪の操作履歴を保持するため
 CREATE TABLE entitlement_audit (
   audit_id    UUID PRIMARY KEY,
   occurred_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -9,5 +12,3 @@ CREATE TABLE entitlement_audit (
   request_id  TEXT,
   detail      JSONB
 );
-
-CREATE INDEX entitlement_audit_user_idx ON entitlement_audit (user_id, occurred_at);
