@@ -57,7 +57,7 @@ kind クラスターを GitHub Actions で作る Actionが使える
 
 ### CD
 コンテナを GHCR に push + マニフェストを更新
-- CIのmain マージなどでghcr.io/<org>/<svc>:<sha> を push
-- CIでdeploy/(Helm values など)の image tag を更新
+- CIのmain マージなどでghcr.io/<org>/<svc>:<tag> を push
+- PRでdeploy/(Helm values など)の image tag を更新
 - ローカル側は Argo CD 等で GitHub を監視して自動反映
 
