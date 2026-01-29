@@ -17,3 +17,11 @@ build/
 .gradle/
 .vscode
 .gradle/
+.codex/
+.worktrees/
+
+# jdtls / Eclipse JDT metadata
+.classpath
+.project
+.settings/
+bin/

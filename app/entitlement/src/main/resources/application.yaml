@@ -1,6 +1,36 @@
 server:
   port: 8080
 
+nats:
+  enabled: true
+  url: nats://localhost:4222
+  connection-timeout: 2
+
+entitlement:
+  idempotency:
+    ttl-hours: 24
+  outbox:
+    enabled: true
+    poll-interval-ms: 1000
+    batch-size: 50
+    max-attempts: 10
+    backoff-base-seconds: 1
+    backoff-max-seconds: 60
+    backoff-exponent-base: 2.0
+    backoff-jitter-min: 0.5
+    backoff-jitter-max: 1.5
+    backoff-min-seconds: 1
+    error-message-max-length: 1000
+    lease-seconds: 30
+    published-ttl-hours: 24
+  nats:
+    subject: entitlement.events
+    stream: entitlement-events
+    duplicate-window: 2m
+  retention:
+    enabled: true
+    cleanup-interval-ms: 3600000
+
 management:
   endpoints:
     web:

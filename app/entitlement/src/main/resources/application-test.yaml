@@ -1,0 +1,23 @@
+nats:
+  enabled: false
+
+entitlement:
+  idempotency:
+    ttl-hours: 24
+  outbox:
+    enabled: false
+    poll-interval-ms: 1000
+    batch-size: 50
+    max-attempts: 10
+    backoff-base-seconds: 1
+    backoff-max-seconds: 60
+    backoff-exponent-base: 2.0
+    backoff-jitter-min: 0.5
+    backoff-jitter-max: 1.5
+    backoff-min-seconds: 1
+    error-message-max-length: 1000
+    lease-seconds: 30
+    published-ttl-hours: 24
+  retention:
+    enabled: false
+    cleanup-interval-ms: 3600000
