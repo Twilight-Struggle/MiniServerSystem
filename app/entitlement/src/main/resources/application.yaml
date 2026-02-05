@@ -1,6 +1,53 @@
 server:
   port: 8080
 
+spring:
+  application:
+    name: entitlement
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    create-schemas: true
+    default-schema: entitlement
+    schemas: entitlement
+    table: flyway_schema_history_entitlement
+    connect-retries: 30
+    connect-retries-interval: 2s
+
+nats:
+  enabled: true
+  url: ${NATS_URL:nats://nats:4222}
+  connection-timeout: 2
+
+entitlement:
+  idempotency:
+    ttl-hours: 24
+
+  outbox:
+    enabled: true
+    poll-interval: 1s
+    batch-size: 50
+    max-attempts: 10
+    backoff-base: 1s
+    backoff-max: 60s
+    backoff-exponent-base: 2.0
+    backoff-jitter-min: 0.5
+    backoff-jitter-max: 1.5
+    backoff-min: 1s
+    error-message-max-length: 1000
+    lease: 30s
+    published-ttl: 24h
+
+  nats:
+    subject: entitlement.events
+    stream: entitlement-events
+    duplicate-window: 2m
+
+  retention:
+    enabled: true
+    cleanup-interval: 1h
+
 management:
   endpoints:
     web:

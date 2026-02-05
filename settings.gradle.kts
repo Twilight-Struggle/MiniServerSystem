@@ -1,6 +1,7 @@
 rootProject.name = "mini-server-system"
 
 include(":libs:common")
+include(":libs:proto")
 
 include(":app:gateway-bff")
 include(":app:account")

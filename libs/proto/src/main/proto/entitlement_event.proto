@@ -1,0 +1,27 @@
+// どこで: Entitlement/Notification 間のイベント定義
+// 何を: 権利付与/剥奪イベントのスキーマを定義する
+// なぜ: 送受信の契約を単一の正本に集約するため
+syntax = "proto3";
+
+package com.example.proto;
+
+option java_multiple_files = true;
+option java_package = "com.example.proto.entitlement";
+option java_outer_classname = "EntitlementEvents";
+
+message EntitlementEvent {
+  enum EventType {
+    ENTITLEMENT_GRANTED = 0;
+    ENTITLEMENT_REVOKED = 1;
+  }
+
+  string event_id = 1;
+  EventType event_type = 2;
+  string occurred_at = 3;
+  string user_id = 4;
+  string stock_keeping_unit = 5;
+  string source = 6;
+  string source_id = 7;
+  int64 version = 8;
+  string trace_id = 9;
+}

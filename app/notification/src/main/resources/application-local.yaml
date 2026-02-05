@@ -1,0 +1,15 @@
+spring:
+  config:
+      activate:
+        on-profile: local
+
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:postgres}:${POSTGRES_PORT:5432}/${POSTGRES_DB:miniserversystem}
+    username: ${POSTGRES_USER:miniserversystem}
+    password: ${POSTGRES_PASSWORD:miniserversystem}
+
+  flyway:
+    enabled: true
+
+nats:
+  url: ${NATS_URL:nats://localhost:4222}

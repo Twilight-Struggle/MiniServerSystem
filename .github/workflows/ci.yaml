@@ -31,6 +31,49 @@ jobs:
       - name: Unit tests
         run: ./gradlew test
 
+  migrate-check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: miniserversystem
+          POSTGRES_USER: miniserversystem
+          POSTGRES_PASSWORD: miniserversystem
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U miniserversystem -d miniserversystem"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Flyway migrate (entitlement)
+        run: |
+          docker run --rm --network host \
+            -v "$PWD/app/entitlement/src/main/resources/db/migration:/flyway/sql" \
+            flyway/flyway:latest \
+            -url="jdbc:postgresql://127.0.0.1:5432/miniserversystem" \
+            -user="miniserversystem" -password="miniserversystem" \
+            -schemas="entitlement" \
+            -table="flyway_schema_history_entitlement" \
+            -createSchemas=true \
+            migrate
+
+      - name: Flyway migrate (notification)
+        run: |
+          docker run --rm --network host \
+            -v "$PWD/app/notification/src/main/resources/db/migration:/flyway/sql" \
+            flyway/flyway:latest \
+            -url="jdbc:postgresql://127.0.0.1:5432/miniserversystem" \
+            -user="miniserversystem" -password="miniserversystem" \
+            -schemas="notification" \
+            -table="flyway_schema_history_notification" \
+            -createSchemas=true \
+            migrate
+
   e2e:
     name: E2E (kind + k8s deploy)
     runs-on: ubuntu-latest
@@ -97,6 +140,17 @@ jobs:
             -n miniserversystem --create-namespace \
             -f deploy/helm/miniserversystem-platform/values-ci.yaml \
             --wait --timeout 5m
+
+      - name: Dump diagnostics (on failure)
+        if: failure()
+        run: |
+          set -euxo pipefail
+          kubectl get pods -n miniserversystem -o wide
+          kubectl describe deploy entitlement -n miniserversystem || true
+          kubectl describe deploy notification -n miniserversystem || true
+          kubectl get events -n miniserversystem --sort-by=.metadata.creationTimestamp || true
+          kubectl logs -n miniserversystem deploy/entitlement --tail=200 || true
+          kubectl logs -n miniserversystem deploy/notification --tail=200 || true
 
       - name: E2E (health checks + diagnostics)
         run: |

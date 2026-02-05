@@ -1,6 +1,65 @@
 server:
   port: 8080
 
+spring:
+  application:
+    name: notification
+  
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+    create-schemas: true
+    default-schema: notification
+    schemas: notification
+    table: flyway_schema_history_notification
+
+    connect-retries: 30
+    connect-retries-interval: 2s
+
+nats:
+  enabled: true
+  url: ${NATS_URL:nats://nats:4222}
+  connection-timeout: 2
+
+notification:
+  delivery:
+    enabled: true
+    poll-interval: 1s
+    batch-size: 50
+    max-attempts: 10
+    backoff-base: 1s
+    backoff-max: 60s
+    backoff-exponent-base: 2.0
+    backoff-jitter-min: 0.5
+    backoff-jitter-max: 1.5
+    backoff-min: 1s
+    error-message-max-length: 1000
+    lease: 30s
+
+  retention:
+    enabled: true
+    retention-days: 30
+    cleanup-interval: 1h
+
+  nats:
+    subject: entitlement.events
+    stream: entitlement-events
+    durable: notification-entitlement-consumer
+    duplicate-window: 2m
+    ack-wait: 10s
+    max-deliver: 10
+
+    advisory:
+      subject: $JS.EVENT.ADVISORY.CONSUMER.MAX_DELIVERIES.entitlement-events.notification-entitlement-consumer
+      stream: notification-advisory-dlq
+      durable: notification-advisory-consumer
+
+    terminated-advisory:
+      subject: $JS.EVENT.ADVISORY.CONSUMER.MSG_TERMINATED.entitlement-events.notification-entitlement-consumer
+      stream: notification-terminated-advisory-dlq
+      durable: notification-terminated-advisory-consumer
+
 management:
   endpoints:
     web:
