@@ -13,8 +13,6 @@ import org.springframework.test.context.ActiveProfiles;
 @ActiveProfiles("test")
 class NotificationApplicationTests extends AbstractPostgresContainerTest {
 
-	@Test
-	void contextLoads() {
-	}
-
+  @Test
+  void contextLoads() {}
 }

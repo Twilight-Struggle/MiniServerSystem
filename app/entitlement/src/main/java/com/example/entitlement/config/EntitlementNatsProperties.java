@@ -14,7 +14,4 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 @ConfigurationProperties(prefix = "entitlement.nats")
 public record EntitlementNatsProperties(
-                @NotBlank String subject,
-                @NotBlank String stream,
-                @NotNull Duration duplicateWindow) {
-}
+    @NotBlank String subject, @NotBlank String stream, @NotNull Duration duplicateWindow) {}

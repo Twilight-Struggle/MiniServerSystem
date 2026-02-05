@@ -5,45 +5,47 @@
  */
 package com.example.notification.repository;
 
+import static com.example.common.JdbcTimestampUtils.toTimestamp;
+
 import java.time.Instant;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-import lombok.RequiredArgsConstructor;
-
-import static com.example.common.JdbcTimestampUtils.toTimestamp;
-
 @Repository
 @RequiredArgsConstructor
 public class ProcessedEventRepository {
 
-    private final NamedParameterJdbcTemplate jdbcTemplate;
+  private final NamedParameterJdbcTemplate jdbcTemplate;
 
-    public boolean insertIfAbsent(UUID eventId, Instant processedAt) {
-        String sql = """
+  public boolean insertIfAbsent(UUID eventId, Instant processedAt) {
+    final String sql =
+        """
                 INSERT INTO processed_events (event_id, processed_at)
                 VALUES (:eventId, :processedAt)
                 """;
-        MapSqlParameterSource params = new MapSqlParameterSource()
-                .addValue("eventId", eventId)
-                .addValue("processedAt", toTimestamp(processedAt));
-        try {
-            return jdbcTemplate.update(sql, params) > 0;
-        } catch (DuplicateKeyException ex) {
-            return false;
-        }
+    final MapSqlParameterSource params =
+        new MapSqlParameterSource()
+            .addValue("eventId", eventId)
+            .addValue("processedAt", toTimestamp(processedAt));
+    try {
+      return jdbcTemplate.update(sql, params) > 0;
+    } catch (DuplicateKeyException ex) {
+      return false;
     }
+  }
 
-    public int deleteOlderThan(Instant threshold) {
-        String sql = """
+  public int deleteOlderThan(Instant threshold) {
+    final String sql =
+        """
                 DELETE FROM processed_events
                 WHERE processed_at < :threshold
                 """;
-        MapSqlParameterSource params = new MapSqlParameterSource()
-                .addValue("threshold", toTimestamp(threshold));
-        return jdbcTemplate.update(sql, params);
-    }
+    final MapSqlParameterSource params =
+        new MapSqlParameterSource().addValue("threshold", toTimestamp(threshold));
+    return jdbcTemplate.update(sql, params);
+  }
 }
