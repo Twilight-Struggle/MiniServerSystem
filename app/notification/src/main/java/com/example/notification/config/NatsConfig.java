@@ -18,12 +18,14 @@ import org.springframework.context.annotation.Configuration;
 @ConditionalOnProperty(name = "nats.enabled", havingValue = "true", matchIfMissing = true)
 public class NatsConfig {
 
-    @Bean(destroyMethod = "close")
-    public Connection natsConnection(NatsProperties properties) throws IOException, InterruptedException {
-        Options options = new Options.Builder()
-                .server(properties.url())
-                .connectionTimeout(Duration.ofSeconds(properties.connectionTimeout()))
-                .build();
-        return Nats.connect(options);
-    }
+  @Bean(destroyMethod = "close")
+  public Connection natsConnection(NatsProperties properties)
+      throws IOException, InterruptedException {
+    final Options options =
+        new Options.Builder()
+            .server(properties.url())
+            .connectionTimeout(Duration.ofSeconds(properties.connectionTimeout()))
+            .build();
+    return Nats.connect(options);
+  }
 }

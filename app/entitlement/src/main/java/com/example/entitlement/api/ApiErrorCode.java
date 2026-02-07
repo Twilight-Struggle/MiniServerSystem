@@ -6,7 +6,7 @@
 package com.example.entitlement.api;
 
 public enum ApiErrorCode {
-    BAD_REQUEST,
-    IDEMPOTENCY_KEY_CONFLICT,
-    ENTITLEMENT_STATE_CONFLICT
+  BAD_REQUEST,
+  IDEMPOTENCY_KEY_CONFLICT,
+  ENTITLEMENT_STATE_CONFLICT
 }

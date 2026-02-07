@@ -36,3 +36,6 @@ Phase2
 e2e
 デプロイ
 メトリクス + RUNBOOK
+
+### Static Analysis
+SpotBugs の EI_EXPOSE_REP/EI_EXPOSE_REP2 は防御的コピーまたはコピー可能な依存の再ラップで対応する

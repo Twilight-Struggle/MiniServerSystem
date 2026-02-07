@@ -9,13 +9,12 @@ import java.sql.Timestamp;
 import java.time.Instant;
 
 public final class JdbcTimestampUtils {
-    private JdbcTimestampUtils() {
-    }
+  private JdbcTimestampUtils() {}
 
-    // 前提: Instant は UTC を表現するため Timestamp.from で UTC のまま渡す
-    // トレードオフ: DB 側のタイムゾーン設定が UTC 以外でも、アプリは UTC で統一する
-    // 理由: JDBC ドライバの型推論に依存せず、常に明示型でバインドするため
-    public static Timestamp toTimestamp(Instant instant) {
-        return instant == null ? null : Timestamp.from(instant);
-    }
+  // 前提: Instant は UTC を表現するため Timestamp.from で UTC のまま渡す
+  // トレードオフ: DB 側のタイムゾーン設定が UTC 以外でも、アプリは UTC で統一する
+  // 理由: JDBC ドライバの型推論に依存せず、常に明示型でバインドするため
+  public static Timestamp toTimestamp(Instant instant) {
+    return instant == null ? null : Timestamp.from(instant);
+  }
 }

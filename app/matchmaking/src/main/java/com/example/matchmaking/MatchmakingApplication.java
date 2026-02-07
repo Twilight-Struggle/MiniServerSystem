@@ -9,12 +9,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class MatchmakingApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(MatchmakingApplication.class, args);
-	}
+  public static void main(String[] args) {
+    SpringApplication.run(MatchmakingApplication.class, args);
+  }
 
-	@GetMapping("/")
-	public String home() {
-		return "matchmaking: ok";
-	}
+  @GetMapping("/")
+  public String home() {
+    return "matchmaking: ok";
+  }
 }

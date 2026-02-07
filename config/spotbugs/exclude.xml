@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+    <!-- 例: generated は除外 -->
+    <Match>
+        <Source name="~.*\/generated\/.*"/>
+    </Match>
+</FindBugsFilter>

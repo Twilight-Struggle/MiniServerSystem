@@ -10,13 +10,12 @@ import com.fasterxml.jackson.databind.annotation.JsonNaming;
 
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public record EntitlementEventPayload(
-        String eventId,
-        String eventType,
-        String occurredAt,
-        String userId,
-        String stockKeepingUnit,
-        String source,
-        String sourceId,
-        long version,
-        String traceId) {
-}
+    String eventId,
+    String eventType,
+    String occurredAt,
+    String userId,
+    String stockKeepingUnit,
+    String source,
+    String sourceId,
+    long version,
+    String traceId) {}

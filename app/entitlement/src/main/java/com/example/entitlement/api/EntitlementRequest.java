@@ -11,12 +11,7 @@ import jakarta.validation.constraints.NotBlank;
 
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public record EntitlementRequest(
-        @NotBlank(message = "user_id is required")
-        String userId,
-        @NotBlank(message = "stock_keeping_unit is required")
-        String stockKeepingUnit,
-        @NotBlank(message = "reason is required")
-        String reason,
-        @NotBlank(message = "purchase_id is required")
-        String purchaseId) {
-}
+    @NotBlank(message = "user_id is required") String userId,
+    @NotBlank(message = "stock_keeping_unit is required") String stockKeepingUnit,
+    @NotBlank(message = "reason is required") String reason,
+    @NotBlank(message = "purchase_id is required") String purchaseId) {}

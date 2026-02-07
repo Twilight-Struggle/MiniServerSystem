@@ -8,9 +8,4 @@ package com.example.entitlement.model;
 import java.util.UUID;
 
 public record OutboxEventRecord(
-        UUID eventId,
-        String eventType,
-        String aggregateKey,
-        String payloadJson,
-        int attemptCount) {
-}
+    UUID eventId, String eventType, String aggregateKey, String payloadJson, int attemptCount) {}

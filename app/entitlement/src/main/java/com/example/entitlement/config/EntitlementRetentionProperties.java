@@ -6,11 +6,7 @@
 package com.example.entitlement.config;
 
 import java.time.Duration;
-
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "entitlement.retention")
-public record EntitlementRetentionProperties(
-                boolean enabled,
-                Duration cleanupInterval) {
-}
+public record EntitlementRetentionProperties(boolean enabled, Duration cleanupInterval) {}

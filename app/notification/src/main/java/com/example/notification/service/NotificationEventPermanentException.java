@@ -7,7 +7,7 @@ package com.example.notification.service;
 
 public class NotificationEventPermanentException extends RuntimeException {
 
-    public NotificationEventPermanentException(String message, Throwable cause) {
-        super(message, cause);
-    }
+  public NotificationEventPermanentException(String message, Throwable cause) {
+    super(message, cause);
+  }
 }

@@ -3,10 +3,9 @@ package com.example.common;
 import java.util.UUID;
 
 public final class TraceIds {
-    private TraceIds() {
-    }
+  private TraceIds() {}
 
-    public static String newTraceId() {
-        return UUID.randomUUID().toString();
-    }
+  public static String newTraceId() {
+    return UUID.randomUUID().toString();
+  }
 }

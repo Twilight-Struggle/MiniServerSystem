@@ -8,9 +8,8 @@ package com.example.entitlement.model;
 import java.time.Instant;
 
 public record IdempotencyRecord(
-        String idempotencyKey,
-        String requestHash,
-        int responseCode,
-        String responseBodyJson,
-        Instant expiresAt) {
-}
+    String idempotencyKey,
+    String requestHash,
+    int responseCode,
+    String responseBodyJson,
+    Instant expiresAt) {}

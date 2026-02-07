@@ -8,9 +8,8 @@ package com.example.entitlement.model;
 import java.time.Instant;
 
 public record EntitlementRecord(
-        String userId,
-        String stockKeepingUnit,
-        EntitlementStatus status,
-        long version,
-        Instant updatedAt) {
-}
+    String userId,
+    String stockKeepingUnit,
+    EntitlementStatus status,
+    long version,
+    Instant updatedAt) {}

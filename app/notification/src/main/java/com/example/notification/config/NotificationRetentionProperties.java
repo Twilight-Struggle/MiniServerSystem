@@ -6,12 +6,8 @@
 package com.example.notification.config;
 
 import java.time.Duration;
-
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "notification.retention")
 public record NotificationRetentionProperties(
-                boolean enabled,
-                int retentionDays,
-                Duration cleanupInterval) {
-}
+    boolean enabled, int retentionDays, Duration cleanupInterval) {}

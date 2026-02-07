@@ -5,23 +5,23 @@
  */
 package com.example.notification.repository;
 
+import static com.example.common.JdbcTimestampUtils.toTimestamp;
+
 import java.time.Instant;
+import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
-
-import lombok.RequiredArgsConstructor;
-
-import static com.example.common.JdbcTimestampUtils.toTimestamp;
 
 @Repository
 @RequiredArgsConstructor
 public class NotificationNatsDlqRepository {
 
-    private final NamedParameterJdbcTemplate jdbcTemplate;
+  private final NamedParameterJdbcTemplate jdbcTemplate;
 
-    public void insert(long streamSeq, Instant createdAt) {
-        String sql = """
+  public void insert(long streamSeq, Instant createdAt) {
+    final String sql =
+        """
                 INSERT INTO notification_nats_dlq (
                   stream_seq,
                   created_at
@@ -31,9 +31,10 @@ public class NotificationNatsDlqRepository {
                 )
                 ON CONFLICT (stream_seq) DO NOTHING
                 """;
-        MapSqlParameterSource params = new MapSqlParameterSource()
-                .addValue("streamSeq", streamSeq)
-                .addValue("createdAt", toTimestamp(createdAt));
-        jdbcTemplate.update(sql, params);
-    }
+    final MapSqlParameterSource params =
+        new MapSqlParameterSource()
+            .addValue("streamSeq", streamSeq)
+            .addValue("createdAt", toTimestamp(createdAt));
+    jdbcTemplate.update(sql, params);
+  }
 }

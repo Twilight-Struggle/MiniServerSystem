@@ -7,8 +7,8 @@ package com.example.entitlement.model;
 
 // DBのCHECK制約と値を一致させ、アプリ側の型安全性を担保する。
 public enum OutboxStatus {
-    PENDING,
-    IN_FLIGHT,
-    PUBLISHED,
-    FAILED
+  PENDING,
+  IN_FLIGHT,
+  PUBLISHED,
+  FAILED
 }

@@ -8,5 +8,5 @@ package com.example.notification.service;
 import com.example.notification.model.NotificationRecord;
 
 public interface NotificationSender {
-    void send(NotificationRecord record);
+  void send(NotificationRecord record);
 }

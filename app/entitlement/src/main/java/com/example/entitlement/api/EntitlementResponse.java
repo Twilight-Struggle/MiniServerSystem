@@ -11,9 +11,4 @@ import java.time.Instant;
 
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public record EntitlementResponse(
-        String userId,
-        String stockKeepingUnit,
-        String status,
-        long version,
-        Instant updatedAt) {
-}
+    String userId, String stockKeepingUnit, String status, long version, Instant updatedAt) {}

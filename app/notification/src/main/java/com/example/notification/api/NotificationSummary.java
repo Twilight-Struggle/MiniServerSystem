@@ -14,12 +14,10 @@ import java.util.UUID;
 
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public record NotificationSummary(
-        UUID notificationId,
-        UUID eventId,
-        String type,
-        NotificationStatus status,
-        Instant createdAt,
-        Instant sentAt,
-        JsonNode payload
-) {
-}
+    UUID notificationId,
+    UUID eventId,
+    String type,
+    NotificationStatus status,
+    Instant createdAt,
+    Instant sentAt,
+    JsonNode payload) {}

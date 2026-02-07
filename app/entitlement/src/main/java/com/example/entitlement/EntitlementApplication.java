@@ -18,7 +18,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @Import(TimeConfig.class)
 public class EntitlementApplication {
 
-    public static void main(String[] args) {
-        SpringApplication.run(EntitlementApplication.class, args);
-    }
+  public static void main(String[] args) {
+    SpringApplication.run(EntitlementApplication.class, args);
+  }
 }

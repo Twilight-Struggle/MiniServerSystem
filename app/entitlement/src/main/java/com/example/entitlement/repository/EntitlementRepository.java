@@ -5,21 +5,19 @@
  */
 package com.example.entitlement.repository;
 
+import static com.example.common.JdbcTimestampUtils.toTimestamp;
+
 import com.example.entitlement.model.EntitlementRecord;
 import com.example.entitlement.model.EntitlementStatus;
-
-import lombok.RequiredArgsConstructor;
-
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
-
-import static com.example.common.JdbcTimestampUtils.toTimestamp;
 
 @Repository
 @RequiredArgsConstructor
@@ -35,7 +33,8 @@ public class EntitlementRepository {
       String sourceId,
       Instant updatedAt) {
     // 既に ACTIVE の場合は更新せず、空結果を返す
-    String sql = """
+    final String sql =
+        """
         INSERT INTO entitlements (
           user_id,
           stock_keeping_unit,
@@ -68,15 +67,16 @@ public class EntitlementRepository {
           updated_at = EXCLUDED.updated_at
         WHERE entitlements.status <> 'ACTIVE'
         RETURNING user_id, stock_keeping_unit, status, version, updated_at;
-            """;
-    MapSqlParameterSource params = new MapSqlParameterSource()
-        .addValue("userId", userId)
-        .addValue("stockKeepingUnit", stockKeepingUnit)
-        .addValue("status", EntitlementStatus.ACTIVE.name())
-        .addValue("grantedAt", toTimestamp(grantedAt))
-        .addValue("source", source)
-        .addValue("sourceId", sourceId)
-        .addValue("updatedAt", toTimestamp(updatedAt));
+        """;
+    final MapSqlParameterSource params =
+        new MapSqlParameterSource()
+            .addValue("userId", userId)
+            .addValue("stockKeepingUnit", stockKeepingUnit)
+            .addValue("status", EntitlementStatus.ACTIVE.name())
+            .addValue("grantedAt", toTimestamp(grantedAt))
+            .addValue("source", source)
+            .addValue("sourceId", sourceId)
+            .addValue("updatedAt", toTimestamp(updatedAt));
     return jdbcTemplate.query(sql, params, this::mapRow).stream().findFirst();
   }
 
@@ -88,7 +88,8 @@ public class EntitlementRepository {
       String sourceId,
       Instant updatedAt) {
     // 既に REVOKED の場合は更新せず、空結果を返す
-    String sql = """
+    final String sql =
+        """
         INSERT INTO entitlements (
           user_id,
           stock_keeping_unit,
@@ -121,27 +122,28 @@ public class EntitlementRepository {
           updated_at = EXCLUDED.updated_at
         WHERE entitlements.status <> 'REVOKED'
         RETURNING user_id, stock_keeping_unit, status, version, updated_at;
-            """;
-    MapSqlParameterSource params = new MapSqlParameterSource()
-        .addValue("userId", userId)
-        .addValue("stockKeepingUnit", stockKeepingUnit)
-        .addValue("status", EntitlementStatus.REVOKED.name())
-        .addValue("revokedAt", toTimestamp(revokedAt))
-        .addValue("source", source)
-        .addValue("sourceId", sourceId)
-        .addValue("updatedAt", toTimestamp(updatedAt));
+        """;
+    final MapSqlParameterSource params =
+        new MapSqlParameterSource()
+            .addValue("userId", userId)
+            .addValue("stockKeepingUnit", stockKeepingUnit)
+            .addValue("status", EntitlementStatus.REVOKED.name())
+            .addValue("revokedAt", toTimestamp(revokedAt))
+            .addValue("source", source)
+            .addValue("sourceId", sourceId)
+            .addValue("updatedAt", toTimestamp(updatedAt));
     return jdbcTemplate.query(sql, params, this::mapRow).stream().findFirst();
   }
 
   public List<EntitlementRecord> findByUserId(String userId) {
-    String sql = """
+    final String sql =
+        """
         SELECT user_id, stock_keeping_unit, status, version, updated_at
         FROM entitlements
         WHERE user_id = :userId
         ORDER BY updated_at DESC
         """;
-    MapSqlParameterSource params = new MapSqlParameterSource()
-        .addValue("userId", userId);
+    final MapSqlParameterSource params = new MapSqlParameterSource().addValue("userId", userId);
     return jdbcTemplate.query(sql, params, this::mapRow);
   }
 

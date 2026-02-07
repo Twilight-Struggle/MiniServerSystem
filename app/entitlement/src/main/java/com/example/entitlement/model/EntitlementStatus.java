@@ -6,6 +6,6 @@
 package com.example.entitlement.model;
 
 public enum EntitlementStatus {
-    ACTIVE,
-    REVOKED
+  ACTIVE,
+  REVOKED
 }

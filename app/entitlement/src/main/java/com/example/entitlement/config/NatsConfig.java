@@ -19,18 +19,20 @@ import org.springframework.context.annotation.Configuration;
 @ConditionalOnProperty(name = "nats.enabled", havingValue = "true", matchIfMissing = true)
 public class NatsConfig {
 
-    @Bean(destroyMethod = "close")
-    public Connection natsConnection(NatsProperties properties) throws IOException, InterruptedException {
-        Options options = new Options.Builder()
-                .server(properties.url())
-                .connectionTimeout(Duration.ofSeconds(properties.connectionTimeout()))
-                .build();
-        return Nats.connect(options);
-    }
+  @Bean(destroyMethod = "close")
+  public Connection natsConnection(NatsProperties properties)
+      throws IOException, InterruptedException {
+    final Options options =
+        new Options.Builder()
+            .server(properties.url())
+            .connectionTimeout(Duration.ofSeconds(properties.connectionTimeout()))
+            .build();
+    return Nats.connect(options);
+  }
 
-    @Bean
-    public JetStream jetStream(Connection connection) throws IOException {
-        // puback を待つ publish に備えて JetStream コンテキストを共有する
-        return connection.jetStream();
-    }
+  @Bean
+  public JetStream jetStream(Connection connection) throws IOException {
+    // puback を待つ publish に備えて JetStream コンテキストを共有する
+    return connection.jetStream();
+  }
 }

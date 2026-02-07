@@ -18,7 +18,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @Import(TimeConfig.class)
 public class NotificationApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(NotificationApplication.class, args);
-	}
+  public static void main(String[] args) {
+    SpringApplication.run(NotificationApplication.class, args);
+  }
 }

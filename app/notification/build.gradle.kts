@@ -25,6 +25,10 @@ dependencies {
     implementation("com.google.guava:guava:33.5.0-jre")
     implementation(project(":libs:proto"))
     implementation(project(":libs:common"))
+    // SpotBugs ツール側に annotations を載せるため、エンジン本体と併せて明示指定する。
+    spotbugs("com.github.spotbugs:spotbugs:4.9.7")
+    spotbugs("com.github.spotbugs:spotbugs-annotations:4.9.7")
+    compileOnly("com.github.spotbugs:spotbugs-annotations:4.9.7")
     runtimeOnly("org.postgresql:postgresql")
     compileOnly("org.projectlombok:lombok:$lombokVersion")
     annotationProcessor("org.projectlombok:lombok:$lombokVersion")

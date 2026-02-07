@@ -5,6 +5,12 @@
  */
 package com.example.notification.nats;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
 import com.example.notification.config.NotificationNatsAdvisoryProperties;
 import com.example.notification.config.NotificationNatsProperties;
 import com.example.notification.repository.NotificationNatsDlqRepository;
@@ -22,87 +28,82 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
-
 @ExtendWith(MockitoExtension.class)
 class NotificationMaxDeliverAdvisorySubscriberTest {
 
-    private static final String SUBJECT =
-            "$JS.EVENT.ADVISORY.CONSUMER.MAX_DELIVERIES.entitlement-events.notification-entitlement-consumer";
-    private static final String STREAM = "notification-advisory-dlq";
-    private static final String DURABLE = "notification-advisory-consumer";
-    private static final Duration DUPLICATE_WINDOW = Duration.ofMinutes(2);
-    private static final Duration ACK_WAIT = Duration.ofSeconds(10);
-    private static final int MAX_DELIVER = 10;
-    private static final long STREAM_SEQ = 42L;
-    private static final Instant NOW = Instant.parse("2026-01-12T00:00:00Z");
+  private static final String SUBJECT =
+      "$JS.EVENT.ADVISORY.CONSUMER.MAX_DELIVERIES.entitlement-events.notification-entitlement-consumer";
+  private static final String STREAM = "notification-advisory-dlq";
+  private static final String DURABLE = "notification-advisory-consumer";
+  private static final Duration DUPLICATE_WINDOW = Duration.ofMinutes(2);
+  private static final Duration ACK_WAIT = Duration.ofSeconds(10);
+  private static final int MAX_DELIVER = 10;
+  private static final long STREAM_SEQ = 42L;
+  private static final Instant NOW = Instant.parse("2026-01-12T00:00:00Z");
 
-    @Mock
-    private Connection connection;
+  @Mock private Connection connection;
 
-    @Mock
-    private NotificationNatsDlqRepository dlqRepository;
+  @Mock private NotificationNatsDlqRepository dlqRepository;
 
-    private NotificationMaxDeliverAdvisorySubscriber subscriber;
+  private NotificationMaxDeliverAdvisorySubscriber subscriber;
 
-    @BeforeEach
-    void setUp() {
-        NotificationNatsProperties natsProperties = new NotificationNatsProperties(
-                "entitlement.events",
-                "entitlement-events",
-                "notification-entitlement-consumer",
-                DUPLICATE_WINDOW,
-                ACK_WAIT,
-                MAX_DELIVER);
-        NotificationNatsAdvisoryProperties advisoryProperties =
-                new NotificationNatsAdvisoryProperties(SUBJECT, STREAM, DURABLE);
-        subscriber = new NotificationMaxDeliverAdvisorySubscriber(
-                connection,
-                natsProperties,
-                advisoryProperties,
-                dlqRepository,
-                new ObjectMapper(),
-                Clock.fixed(NOW, ZoneOffset.UTC));
-    }
+  @BeforeEach
+  void setUp() {
+    final NotificationNatsProperties natsProperties =
+        new NotificationNatsProperties(
+            "entitlement.events",
+            "entitlement-events",
+            "notification-entitlement-consumer",
+            DUPLICATE_WINDOW,
+            ACK_WAIT,
+            MAX_DELIVER);
+    final NotificationNatsAdvisoryProperties advisoryProperties =
+        new NotificationNatsAdvisoryProperties(SUBJECT, STREAM, DURABLE);
+    subscriber =
+        new NotificationMaxDeliverAdvisorySubscriber(
+            connection,
+            natsProperties,
+            advisoryProperties,
+            dlqRepository,
+            new ObjectMapper(),
+            Clock.fixed(NOW, ZoneOffset.UTC));
+  }
 
-    @Test
-    void insertsStreamSeqAndAcks() {
-        Message message = mock(Message.class);
-        String payload = """
-                {
-                  "stream": "entitlement-events",
-                  "consumer": "notification-entitlement-consumer",
-                  "stream_seq": %d
-                }
-                """.formatted(STREAM_SEQ);
-        when(message.getData()).thenReturn(payload.getBytes(StandardCharsets.UTF_8));
+  @Test
+  void insertsStreamSeqAndAcks() {
+    final Message message = mock(Message.class);
+    final String payload =
+        ("{%n"
+                + "  \"stream\": \"entitlement-events\",%n"
+                + "  \"consumer\": \"notification-entitlement-consumer\",%n"
+                + "  \"stream_seq\": %d%n"
+                + "}%n")
+            .formatted(STREAM_SEQ);
+    when(message.getData()).thenReturn(payload.getBytes(StandardCharsets.UTF_8));
 
-        subscriber.handleMessage(message);
+    subscriber.handleMessage(message);
 
-        verify(dlqRepository).insert(STREAM_SEQ, NOW);
-        verify(message).ack();
-        verify(message, never()).nak();
-    }
+    verify(dlqRepository).insert(STREAM_SEQ, NOW);
+    verify(message).ack();
+    verify(message, never()).nak();
+  }
 
-    @Test
-    void ackWhenStreamSeqMissing() {
-        Message message = mock(Message.class);
-        String payload = """
-                {
-                  "stream": "entitlement-events",
-                  "consumer": "notification-entitlement-consumer"
-                }
-                """;
-        when(message.getData()).thenReturn(payload.getBytes(StandardCharsets.UTF_8));
+  @Test
+  void ackWhenStreamSeqMissing() {
+    final Message message = mock(Message.class);
+    final String payload =
+        """
+        {
+          "stream": "entitlement-events",
+          "consumer": "notification-entitlement-consumer"
+        }
+        """;
+    when(message.getData()).thenReturn(payload.getBytes(StandardCharsets.UTF_8));
 
-        subscriber.handleMessage(message);
+    subscriber.handleMessage(message);
 
-        verifyNoInteractions(dlqRepository);
-        verify(message).ack();
-        verify(message, never()).nak();
-    }
+    verifyNoInteractions(dlqRepository);
+    verify(message).ack();
+    verify(message, never()).nak();
+  }
 }

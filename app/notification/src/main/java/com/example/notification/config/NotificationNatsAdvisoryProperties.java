@@ -12,7 +12,4 @@ import org.springframework.validation.annotation.Validated;
 @ConfigurationProperties(prefix = "notification.nats.advisory")
 @Validated
 public record NotificationNatsAdvisoryProperties(
-        @NotBlank String subject,
-        @NotBlank String stream,
-        @NotBlank String durable) {
-}
+    @NotBlank String subject, @NotBlank String stream, @NotBlank String durable) {}

@@ -7,7 +7,7 @@ package com.example.entitlement.api;
 
 public class IdempotencyConflictException extends RuntimeException {
 
-    public IdempotencyConflictException(String message) {
-        super(message);
-    }
+  public IdempotencyConflictException(String message) {
+    super(message);
+  }
 }
