@@ -8,5 +8,4 @@ package com.example.entitlement.config;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "entitlement.idempotency")
-public record EntitlementIdempotencyProperties(long ttlHours) {
-}
+public record EntitlementIdempotencyProperties(long ttlHours) {}

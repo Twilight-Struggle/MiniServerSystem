@@ -5,66 +5,65 @@
  */
 package com.example.entitlement.nats;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.example.entitlement.config.EntitlementNatsProperties;
 import io.nats.client.Connection;
 import io.nats.client.JetStreamApiException;
 import io.nats.client.JetStreamManagement;
 import io.nats.client.api.Error;
 import io.nats.client.api.StreamConfiguration;
+import java.io.IOException;
 import java.time.Duration;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 @ExtendWith(MockitoExtension.class)
 class EntitlementJetStreamBootstrapTest {
 
-    private static final EntitlementNatsProperties PROPERTIES = new EntitlementNatsProperties(
-            "entitlement.events",
-            "entitlement-events",
-            Duration.ofMinutes(2));
+  private static final EntitlementNatsProperties PROPERTIES =
+      new EntitlementNatsProperties(
+          "entitlement.events", "entitlement-events", Duration.ofMinutes(2));
 
-    @Mock
-    private Connection connection;
+  @Mock private Connection connection;
 
-    @Mock
-    private JetStreamManagement jetStreamManagement;
+  @Mock private JetStreamManagement jetStreamManagement;
 
-    @Test
-    void startCreatesStreamWithDuplicateWindow() throws Exception {
-        when(connection.jetStreamManagement()).thenReturn(jetStreamManagement);
-        when(jetStreamManagement.updateStream(any(StreamConfiguration.class)))
-                .thenThrow(streamNotFound());
+  @Test
+  void startCreatesStreamWithDuplicateWindow() throws IOException, JetStreamApiException {
+    when(connection.jetStreamManagement()).thenReturn(jetStreamManagement);
+    when(jetStreamManagement.updateStream(any(StreamConfiguration.class)))
+        .thenThrow(streamNotFound());
 
-        EntitlementJetStreamBootstrap bootstrap = new EntitlementJetStreamBootstrap(connection, PROPERTIES);
-        bootstrap.start();
+    final EntitlementJetStreamBootstrap bootstrap =
+        new EntitlementJetStreamBootstrap(connection, PROPERTIES);
+    bootstrap.start();
 
-        verify(jetStreamManagement).updateStream(any(StreamConfiguration.class));
-        verify(jetStreamManagement).addStream(any(StreamConfiguration.class));
+    verify(jetStreamManagement).updateStream(any(StreamConfiguration.class));
+    verify(jetStreamManagement).addStream(any(StreamConfiguration.class));
+  }
+
+  private JetStreamApiException streamNotFound() {
+    return new StreamNotFoundException();
+  }
+
+  private static final class StreamNotFoundException extends JetStreamApiException {
+    private StreamNotFoundException() {
+      super(Error.JsBadRequestErr);
     }
 
-    private JetStreamApiException streamNotFound() {
-        return new StreamNotFoundException();
+    @Override
+    public int getApiErrorCode() {
+      return 10059;
     }
 
-    private static final class StreamNotFoundException extends JetStreamApiException {
-        private StreamNotFoundException() {
-            super(Error.JsBadRequestErr);
-        }
-
-        @Override
-        public int getApiErrorCode() {
-            return 10059;
-        }
-
-        @Override
-        public int getErrorCode() {
-            return 404;
-        }
+    @Override
+    public int getErrorCode() {
+      return 404;
     }
+  }
 }

@@ -11,28 +11,28 @@ import org.testcontainers.containers.PostgreSQLContainer;
 
 public abstract class AbstractPostgresContainerTest {
 
-    // JVM 内のテスト全体で共通の Postgres コンテナを使い回し、起動コストを抑える
-    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
+  // JVM 内のテスト全体で共通の Postgres コンテナを使い回し、起動コストを抑える
+  static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
 
-    static {
-        // Spring の @DynamicPropertySource は JUnit の Testcontainers 拡張より先に動く場合がある。
-        // コンテキストキャッシュで接続情報が使い回されても DB が必ず起動済みになるよう、ここで明示起動する。
-        POSTGRES.start();
-    }
+  static {
+    // Spring の @DynamicPropertySource は JUnit の Testcontainers 拡張より先に動く場合がある。
+    // コンテキストキャッシュで接続情報が使い回されても DB が必ず起動済みになるよう、ここで明示起動する。
+    POSTGRES.start();
+  }
 
-    @DynamicPropertySource
-    static void registerProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
+  @DynamicPropertySource
+  static void registerProperties(DynamicPropertyRegistry registry) {
+    registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
+    registry.add("spring.datasource.username", POSTGRES::getUsername);
+    registry.add("spring.datasource.password", POSTGRES::getPassword);
 
-        registry.add("spring.datasource.hikari.schema", () -> "entitlement");
+    registry.add("spring.datasource.hikari.schema", () -> "entitlement");
 
-        registry.add("spring.flyway.enabled", () -> "true");
-        registry.add("spring.flyway.locations", () -> "classpath:db/migration");
-        registry.add("spring.flyway.default-schema", () -> "entitlement");
-        registry.add("spring.flyway.schemas", () -> "entitlement");
-        registry.add("spring.flyway.create-schemas", () -> "true");
-        registry.add("spring.flyway.table", () -> "flyway_schema_history_entitlement");
-    }
+    registry.add("spring.flyway.enabled", () -> "true");
+    registry.add("spring.flyway.locations", () -> "classpath:db/migration");
+    registry.add("spring.flyway.default-schema", () -> "entitlement");
+    registry.add("spring.flyway.schemas", () -> "entitlement");
+    registry.add("spring.flyway.create-schemas", () -> "true");
+    registry.add("spring.flyway.table", () -> "flyway_schema_history_entitlement");
+  }
 }

@@ -13,11 +13,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class LocalNotificationSender implements NotificationSender {
 
-    private static final Logger logger = LoggerFactory.getLogger(LocalNotificationSender.class);
+  private static final Logger logger = LoggerFactory.getLogger(LocalNotificationSender.class);
 
-    @Override
-    public void send(NotificationRecord record) {
-        // 実送信は行わず、ログに残すだけとする
-        logger.info("notification simulated send id={} eventId={}", record.notificationId(), record.eventId());
-    }
+  @Override
+  public void send(NotificationRecord record) {
+    // 実送信は行わず、ログに残すだけとする
+    logger.info(
+        "notification simulated send id={} eventId={}", record.notificationId(), record.eventId());
+  }
 }

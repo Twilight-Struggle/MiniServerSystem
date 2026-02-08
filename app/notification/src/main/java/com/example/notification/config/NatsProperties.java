@@ -8,5 +8,4 @@ package com.example.notification.config;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "nats")
-public record NatsProperties(boolean enabled, String url, Integer connectionTimeout) {
-}
+public record NatsProperties(boolean enabled, String url, Integer connectionTimeout) {}

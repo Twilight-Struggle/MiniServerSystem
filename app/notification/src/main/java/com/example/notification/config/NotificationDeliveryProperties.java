@@ -6,21 +6,19 @@
 package com.example.notification.config;
 
 import java.time.Duration;
-
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "notification.delivery")
 public record NotificationDeliveryProperties(
-                boolean enabled,
-                Duration pollInterval,
-                int batchSize,
-                int maxAttempts,
-                Duration backoffBase,
-                Duration backoffMax,
-                double backoffExponentBase,
-                double backoffJitterMin,
-                double backoffJitterMax,
-                Duration backoffMin,
-                int errorMessageMaxLength,
-                Duration lease) {
-}
+    boolean enabled,
+    Duration pollInterval,
+    int batchSize,
+    int maxAttempts,
+    Duration backoffBase,
+    Duration backoffMax,
+    double backoffExponentBase,
+    double backoffJitterMin,
+    double backoffJitterMax,
+    Duration backoffMin,
+    int errorMessageMaxLength,
+    Duration lease) {}

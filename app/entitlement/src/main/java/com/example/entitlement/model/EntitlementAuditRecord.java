@@ -9,13 +9,12 @@ import java.time.Instant;
 import java.util.UUID;
 
 public record EntitlementAuditRecord(
-        UUID auditId,
-        Instant occurredAt,
-        String userId,
-        String stockKeepingUnit,
-        String action,
-        String source,
-        String sourceId,
-        String requestId,
-        String detailJson) {
-}
+    UUID auditId,
+    Instant occurredAt,
+    String userId,
+    String stockKeepingUnit,
+    String action,
+    String source,
+    String sourceId,
+    String requestId,
+    String detailJson) {}

@@ -11,8 +11,4 @@ import java.time.Instant;
 
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public record EntitlementSummary(
-        String stockKeepingUnit,
-        String status,
-        long version,
-        Instant updatedAt) {
-}
+    String stockKeepingUnit, String status, long version, Instant updatedAt) {}

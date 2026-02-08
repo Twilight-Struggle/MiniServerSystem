@@ -5,21 +5,19 @@
  */
 package com.example.entitlement.repository;
 
+import static com.example.common.JdbcTimestampUtils.toTimestamp;
+
 import com.example.entitlement.model.IdempotencyRecord;
-
-import lombok.RequiredArgsConstructor;
-
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.Optional;
+import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-
-import static com.example.common.JdbcTimestampUtils.toTimestamp;
 
 @Repository
 @RequiredArgsConstructor
@@ -31,26 +29,27 @@ public class IdempotencyKeyRepository {
   public void lockByKey(long lockKey) {
     // 同一Idempotency-Keyをトランザクション内で直列化する。
     // 64-bit の advisory lock を使い、hashtext(32-bit) の衝突を避ける。
-    String sql = "SELECT pg_advisory_xact_lock(:lockKey)";
-    MapSqlParameterSource params = new MapSqlParameterSource()
-        .addValue("lockKey", lockKey);
+    final String sql = "SELECT pg_advisory_xact_lock(:lockKey)";
+    final MapSqlParameterSource params = new MapSqlParameterSource().addValue("lockKey", lockKey);
     jdbcTemplate.query(sql, params, rs -> null);
   }
 
   public Optional<IdempotencyRecord> findByKey(String idempotencyKey) {
-    String sql = """
+    final String sql =
+        """
         SELECT idem_key, request_hash, response_code, response_body::text AS response_body_text, expires_at
         FROM idempotency_keys
         WHERE idem_key = :idempotencyKey
           AND expires_at > now()
         """;
-    MapSqlParameterSource params = new MapSqlParameterSource()
-        .addValue("idempotencyKey", idempotencyKey);
+    final MapSqlParameterSource params =
+        new MapSqlParameterSource().addValue("idempotencyKey", idempotencyKey);
     return jdbcTemplate.query(sql, params, this::mapRow).stream().findFirst();
   }
 
   public int insert(IdempotencyRecord record) {
-    String sql = """
+    final String sql =
+        """
         INSERT INTO idempotency_keys (
           idem_key,
           request_hash,
@@ -65,17 +64,19 @@ public class IdempotencyKeyRepository {
           :expiresAt
         )
         """;
-    MapSqlParameterSource params = new MapSqlParameterSource()
-        .addValue("idempotencyKey", record.idempotencyKey())
-        .addValue("requestHash", record.requestHash())
-        .addValue("responseCode", record.responseCode())
-        .addValue("responseBody", record.responseBodyJson())
-        .addValue("expiresAt", toTimestamp(record.expiresAt()));
+    final MapSqlParameterSource params =
+        new MapSqlParameterSource()
+            .addValue("idempotencyKey", record.idempotencyKey())
+            .addValue("requestHash", record.requestHash())
+            .addValue("responseCode", record.responseCode())
+            .addValue("responseBody", record.responseBodyJson())
+            .addValue("expiresAt", toTimestamp(record.expiresAt()));
     return jdbcTemplate.update(sql, params);
   }
 
   public int upsertIfExpired(IdempotencyRecord record) {
-    String sql = """
+    final String sql =
+        """
         INSERT INTO idempotency_keys (
           idem_key,
           request_hash,
@@ -97,24 +98,26 @@ public class IdempotencyKeyRepository {
             expires_at    = EXCLUDED.expires_at
         WHERE idempotency_keys.expires_at <= now()
         """;
-    MapSqlParameterSource params = new MapSqlParameterSource()
-        .addValue("idempotencyKey", record.idempotencyKey())
-        .addValue("requestHash", record.requestHash())
-        .addValue("responseCode", record.responseCode())
-        .addValue("responseBody", record.responseBodyJson())
-        .addValue("expiresAt", toTimestamp(record.expiresAt()));
+    final MapSqlParameterSource params =
+        new MapSqlParameterSource()
+            .addValue("idempotencyKey", record.idempotencyKey())
+            .addValue("requestHash", record.requestHash())
+            .addValue("responseCode", record.responseCode())
+            .addValue("responseBody", record.responseBodyJson())
+            .addValue("expiresAt", toTimestamp(record.expiresAt()));
     // 1=保存成功、0=未期限切れが存在して更新されなかった(不変条件違反)。
     return jdbcTemplate.update(sql, params);
   }
 
   public int deleteExpired(Instant now) {
     // 冪等性の TTL は expires_at に保持されているため、期限切れのみ削除する。
-    String sql = """
+    final String sql =
+        """
         DELETE FROM idempotency_keys
         WHERE expires_at <= :now
         """;
-    MapSqlParameterSource params = new MapSqlParameterSource()
-        .addValue("now", toTimestamp(now));
+    final MapSqlParameterSource params =
+        new MapSqlParameterSource().addValue("now", toTimestamp(now));
     return jdbcTemplate.update(sql, params);
   }
 

@@ -9,12 +9,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class GatewayBffApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(GatewayBffApplication.class, args);
-	}
+  public static void main(String[] args) {
+    SpringApplication.run(GatewayBffApplication.class, args);
+  }
 
-	@GetMapping("/")
-	public String home() {
-		return "gateway-bff: ok";
-	}
+  @GetMapping("/")
+  public String home() {
+    return "gateway-bff: ok";
+  }
 }

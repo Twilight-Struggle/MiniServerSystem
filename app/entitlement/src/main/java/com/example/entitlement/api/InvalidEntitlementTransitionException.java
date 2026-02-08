@@ -7,7 +7,7 @@ package com.example.entitlement.api;
 
 public class InvalidEntitlementTransitionException extends RuntimeException {
 
-    public InvalidEntitlementTransitionException(String message) {
-        super(message);
-    }
+  public InvalidEntitlementTransitionException(String message) {
+    super(message);
+  }
 }
