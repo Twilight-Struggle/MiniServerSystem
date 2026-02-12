@@ -9,6 +9,14 @@ app:
     servicePort: 80
     env:
       SPRING_PROFILES_ACTIVE: ci
+      ACCOUNT_BASE_URL: http://account:80
+      OIDC_ISSUER: https://accounts.google.com
+      OIDC_AUTHORIZATION_ENDPOINT: https://accounts.google.com/o/oauth2/v2/auth
+      OIDC_TOKEN_ENDPOINT: https://oauth2.googleapis.com/token
+      OIDC_JWKS_URI: https://www.googleapis.com/oauth2/v3/certs
+      OIDC_CLIENT_ID: ""
+      OIDC_CLIENT_SECRET: ""
+      OIDC_REDIRECT_URI: http://localhost:18080/callback
 
   account:
     enabled: true

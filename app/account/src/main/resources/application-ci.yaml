@@ -1,0 +1,13 @@
+spring:
+  config:
+    activate:
+      on-profile: ci
+
+  datasource:
+    # CI では ephemeral Postgres を利用する想定
+    url: jdbc:postgresql://${POSTGRES_HOST:postgres}:${POSTGRES_PORT:5432}/${POSTGRES_DB:miniserversystem}
+    username: ${POSTGRES_USER:miniserversystem}
+    password: ${POSTGRES_PASSWORD:miniserversystem}
+
+  flyway:
+    enabled: true

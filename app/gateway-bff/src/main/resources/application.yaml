@@ -1,6 +1,10 @@
 server:
   port: 8080
 
+spring:
+  application:
+    name: gateway-bff
+
 management:
   endpoints:
     web:
