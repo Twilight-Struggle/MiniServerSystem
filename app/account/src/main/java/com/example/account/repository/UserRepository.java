@@ -1,63 +1,114 @@
-/*
- * どこで: app/account/src/main/java/com/example/account/repository/UserRepository.java
- * 何を: users テーブルへの永続化操作を定義するリポジトリ
- * なぜ: Service 層から SQL 実装詳細を分離し、テスト容易性を高めるため
- */
 package com.example.account.repository;
 
+import com.example.account.model.AccountStatus;
 import com.example.account.model.UserRecord;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.Optional;
-
+import lombok.RequiredArgsConstructor;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 @Repository
+@SuppressWarnings("EI_EXPOSE_REP2")
+@RequiredArgsConstructor
 public class UserRepository {
 
-    /**
-     * 役割:
-     * - userId をキーに users レコードを取得する。
-     *
-     * 期待動作:
-     * - レコードが存在する場合のみ Optional に値を入れて返す。
-     * - 実装時は roles を別テーブルで管理する前提のため、このメソッドは users 本体に集中させる。
-     */
-    public Optional<UserRecord> findByUserId(String userId) {
-        throw new UnsupportedOperationException("findByUserId is not implemented yet");
-    }
+  private final NamedParameterJdbcTemplate jdbcTemplate;
 
-    /**
-     * 役割:
-     * - 新規ユーザーを作成する。
-     *
-     * 期待動作:
-     * - userId は呼び出し側で生成し、作成成功時は保存された値を返す。
-     * - 実装時は createdAt/updatedAt を同一時刻で初期化し、status は ACTIVE 固定にする。
-     */
-    public UserRecord insert(UserRecord user) {
-        throw new UnsupportedOperationException("insert is not implemented yet");
-    }
+  public Optional<UserRecord> findByUserId(String userId) {
+    final String sql =
+        """
+                SELECT user_id, display_name, locale, status, created_at, updated_at
+                FROM users
+                WHERE user_id = :userId
+                """;
+    final MapSqlParameterSource params = new MapSqlParameterSource().addValue("userId", userId);
+    return jdbcTemplate.query(sql, params, this::mapRow).stream().findFirst();
+  }
 
-    /**
-     * 役割:
-     * - ユーザープロフィール(displayName/locale)を更新する。
-     *
-     * 期待動作:
-     * - 部分更新を想定し、null 値の扱い(維持/クリア)を仕様として固定する。
-     * - 返却値は更新後の最新状態とする。
-     */
-    public UserRecord updateProfile(String userId, String displayName, String locale) {
-        throw new UnsupportedOperationException("updateProfile is not implemented yet");
-    }
+  public UserRecord insert(UserRecord user) {
+    final String sql =
+        """
+                INSERT INTO users (user_id, display_name, locale, status, created_at, updated_at)
+                VALUES (:userId, :displayName, :locale, :status, :createdAt, :updatedAt)
+                RETURNING user_id, display_name, locale, status, created_at, updated_at
+                """;
+    final MapSqlParameterSource params =
+        new MapSqlParameterSource()
+            .addValue("userId", user.userId())
+            .addValue("displayName", user.displayName())
+            .addValue("locale", user.locale())
+            .addValue("status", user.status().name())
+            .addValue("createdAt", Timestamp.from(user.createdAt()))
+            .addValue("updatedAt", Timestamp.from(user.updatedAt()));
+    return jdbcTemplate.queryForObject(sql, params, this::mapRow);
+  }
 
-    /**
-     * 役割:
-     * - アカウント状態を更新する(主に ACTIVE/SUSPENDED)。
-     *
-     * 期待動作:
-     * - 対象ユーザーが存在しない場合は Optional.empty を返す。
-     * - 実装時は冪等に同一状態への更新を許容するかどうかをテストで固定する。
-     */
-    public Optional<UserRecord> updateStatus(String userId, String status) {
-        throw new UnsupportedOperationException("updateStatus is not implemented yet");
-    }
+  public int insertIfAbsent(UserRecord user) {
+    final String sql =
+        """
+        INSERT INTO users (user_id, display_name, locale, status, created_at, updated_at)
+        VALUES (:userId, :displayName, :locale, :status, :createdAt, :updatedAt)
+        ON CONFLICT (user_id) DO NOTHING
+        """;
+    final MapSqlParameterSource params =
+        new MapSqlParameterSource()
+            .addValue("userId", user.userId())
+            .addValue("displayName", user.displayName())
+            .addValue("locale", user.locale())
+            .addValue("status", user.status().name())
+            .addValue("createdAt", Timestamp.from(user.createdAt()))
+            .addValue("updatedAt", Timestamp.from(user.updatedAt()));
+    return jdbcTemplate.update(sql, params);
+  }
+
+  public UserRecord updateProfile(String userId, String displayName, String locale) {
+    final String sql =
+        """
+                UPDATE users
+                SET display_name = :displayName,
+                    locale = :locale,
+                    updated_at = :updatedAt
+                WHERE user_id = :userId
+                RETURNING user_id, display_name, locale, status, created_at, updated_at
+                """;
+    final MapSqlParameterSource params =
+        new MapSqlParameterSource()
+            .addValue("userId", userId)
+            .addValue("displayName", displayName)
+            .addValue("locale", locale)
+            .addValue("updatedAt", Timestamp.from(Instant.now()));
+    return jdbcTemplate.queryForObject(sql, params, this::mapRow);
+  }
+
+  public Optional<UserRecord> updateStatus(String userId, String status) {
+    final String sql =
+        """
+                UPDATE users
+                SET status = :status,
+                    updated_at = :updatedAt
+                WHERE user_id = :userId
+                RETURNING user_id, display_name, locale, status, created_at, updated_at
+                """;
+    final MapSqlParameterSource params =
+        new MapSqlParameterSource()
+            .addValue("userId", userId)
+            .addValue("status", status)
+            .addValue("updatedAt", Timestamp.from(Instant.now()));
+    return jdbcTemplate.query(sql, params, this::mapRow).stream().findFirst();
+  }
+
+  private UserRecord mapRow(ResultSet rs, int rowNum) throws SQLException {
+    return new UserRecord(
+        rs.getString("user_id"),
+        rs.getString("display_name"),
+        rs.getString("locale"),
+        AccountStatus.valueOf(rs.getString("status")),
+        rs.getTimestamp("created_at").toInstant(),
+        rs.getTimestamp("updated_at").toInstant());
+  }
 }

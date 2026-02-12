@@ -1,50 +1,76 @@
-/*
- * どこで: app/account/src/main/java/com/example/account/repository/IdentityRepository.java
- * 何を: identities テーブルへの永続化操作を定義する
- * なぜ: provider + subject での同定ロジックを一か所に集約するため
- */
 package com.example.account.repository;
 
 import com.example.account.model.IdentityRecord;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.Optional;
+import lombok.RequiredArgsConstructor;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 @Repository
+@SuppressWarnings("EI_EXPOSE_REP2")
+@RequiredArgsConstructor
 public class IdentityRepository {
 
-    /**
-     * 役割:
-     * - provider + subject をキーに既存 identity を取得する。
-     *
-     * 期待動作:
-     * - account 解決の最初の照会ポイントとして利用する。
-     * - 実装時は provider の正規化(大文字小文字)ルールをここで統一する。
-     */
-    public Optional<IdentityRecord> findByProviderAndSubject(String provider, String subject) {
-        throw new UnsupportedOperationException("findByProviderAndSubject is not implemented yet");
-    }
+  private final NamedParameterJdbcTemplate jdbcTemplate;
 
-    /**
-     * 役割:
-     * - 新規 identity を作成する。
-     *
-     * 期待動作:
-     * - provider + subject の一意制約違反時は呼び出し側が再読込できる例外を返す。
-     * - 実装時は createdAt を DB 時刻かアプリ時刻かで統一する。
-     */
-    public IdentityRecord insert(IdentityRecord identity) {
-        throw new UnsupportedOperationException("insert is not implemented yet");
-    }
+  public Optional<IdentityRecord> findByProviderAndSubject(String provider, String subject) {
+    final String sql =
+        """
+        SELECT provider, subject, user_id, email, email_verified, created_at
+        FROM identities
+        WHERE provider = :provider AND subject = :subject
+        """;
+    final MapSqlParameterSource params =
+        new MapSqlParameterSource().addValue("provider", provider).addValue("subject", subject);
+    return jdbcTemplate.query(sql, params, this::mapRow).stream().findFirst();
+  }
 
-    /**
-     * 役割:
-     * - 可変属性(email/email_verified)を最新 claims で更新する。
-     *
-     * 期待動作:
-     * - 同定キー(provider/subject)は変更しない。
-     * - 変更がない場合も安全に呼び出せる冪等更新にする。
-     */
-    public void updateClaims(String provider, String subject, String email, boolean emailVerified) {
-        throw new UnsupportedOperationException("updateClaims is not implemented yet");
-    }
+  public IdentityRecord insert(IdentityRecord identity) {
+    final String sql =
+        """
+        INSERT INTO identities (provider, subject, user_id, email, email_verified, created_at)
+        VALUES (:provider, :subject, :userId, :email, :emailVerified, :createdAt)
+        RETURNING provider, subject, user_id, email, email_verified, created_at
+        """;
+    final MapSqlParameterSource params =
+        new MapSqlParameterSource()
+            .addValue("provider", identity.provider())
+            .addValue("subject", identity.subject())
+            .addValue("userId", identity.userId())
+            .addValue("email", identity.email())
+            .addValue("emailVerified", identity.emailVerified())
+            .addValue("createdAt", Timestamp.from(identity.createdAt()));
+    return jdbcTemplate.queryForObject(sql, params, this::mapRow);
+  }
+
+  public void updateClaims(String provider, String subject, String email, boolean emailVerified) {
+    final String sql =
+        """
+        UPDATE identities
+        SET email = :email,
+            email_verified = :emailVerified
+        WHERE provider = :provider AND subject = :subject
+        """;
+    final MapSqlParameterSource params =
+        new MapSqlParameterSource()
+            .addValue("provider", provider)
+            .addValue("subject", subject)
+            .addValue("email", email)
+            .addValue("emailVerified", emailVerified);
+    jdbcTemplate.update(sql, params);
+  }
+
+  private IdentityRecord mapRow(ResultSet rs, int rowNum) throws SQLException {
+    return new IdentityRecord(
+        rs.getString("provider"),
+        rs.getString("subject"),
+        rs.getString("user_id"),
+        rs.getString("email"),
+        rs.getBoolean("email_verified"),
+        rs.getTimestamp("created_at").toInstant());
+  }
 }

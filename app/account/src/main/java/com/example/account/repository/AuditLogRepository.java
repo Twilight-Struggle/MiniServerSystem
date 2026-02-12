@@ -1,25 +1,33 @@
-/*
- * どこで: app/account/src/main/java/com/example/account/repository/AuditLogRepository.java
- * 何を: audit_logs の書き込み操作を定義する
- * なぜ: 管理操作時の監査証跡を必須保存にするため
- */
 package com.example.account.repository;
 
 import com.example.account.model.AuditLogRecord;
+import java.sql.Timestamp;
+import lombok.RequiredArgsConstructor;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 @Repository
+@SuppressWarnings("EI_EXPOSE_REP2")
+@RequiredArgsConstructor
 public class AuditLogRepository {
 
-    /**
-     * 役割:
-     * - 監査ログを永続化する。
-     *
-     * 期待動作:
-     * - suspend などの管理操作時に必ず呼び出される。
-     * - 実装時は actor/target/action の欠落を DB 制約で防止する。
-     */
-    public void insert(AuditLogRecord auditLogRecord) {
-        throw new UnsupportedOperationException("insert is not implemented yet");
-    }
+  private final NamedParameterJdbcTemplate jdbcTemplate;
+
+  public void insert(AuditLogRecord auditLogRecord) {
+    final String sql =
+        """
+        INSERT INTO audit_logs (id, actor_user_id, action, target_user_id, metadata_json, created_at)
+        VALUES (:id, :actorUserId, :action, :targetUserId, CAST(:metadataJson AS jsonb), :createdAt)
+        """;
+    final MapSqlParameterSource params =
+        new MapSqlParameterSource()
+            .addValue("id", auditLogRecord.id())
+            .addValue("actorUserId", auditLogRecord.actorUserId())
+            .addValue("action", auditLogRecord.action())
+            .addValue("targetUserId", auditLogRecord.targetUserId())
+            .addValue("metadataJson", auditLogRecord.metadataJson())
+            .addValue("createdAt", Timestamp.from(auditLogRecord.createdAt()));
+    jdbcTemplate.update(sql, params);
+  }
 }

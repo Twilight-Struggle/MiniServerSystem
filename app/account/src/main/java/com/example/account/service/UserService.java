@@ -1,38 +1,43 @@
-/*
- * どこで: app/account/src/main/java/com/example/account/service/UserService.java
- * 何を: 一般ユーザー情報の参照/更新を提供
- * なぜ: API 層からビジネスルールを分離し、テスト可能性を高めるため
- */
 package com.example.account.service;
 
 import com.example.account.api.request.UserPatchRequest;
 import com.example.account.api.response.UserResponse;
+import com.example.account.model.UserRecord;
+import com.example.account.repository.RoleRepository;
+import com.example.account.repository.UserRepository;
+import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 @Service
+@SuppressWarnings("EI_EXPOSE_REP2")
+@RequiredArgsConstructor
 public class UserService {
 
-    /**
-     * 役割:
-     * - 指定 userId のプロフィール/状態/ロールをまとめて返す。
-     *
-     * 期待動作:
-     * - users と roles の取得結果を API 返却形式へ整形する。
-     * - 対象未存在時は 404 相当の例外へ変換する。
-     */
-    public UserResponse getUser(String userId) {
-        throw new UnsupportedOperationException("getUser is not implemented yet");
-    }
+  private final UserRepository userRepository;
+  private final RoleRepository roleRepository;
 
-    /**
-     * 役割:
-     * - displayName と locale を最小単位で更新する。
-     *
-     * 期待動作:
-     * - 更新対象項目のみを変更し、他属性は維持する。
-     * - 入力値の許容範囲(空文字/長さ/locale 形式)を検証し、不正値は 400 で返す。
-     */
-    public UserResponse patchUser(String userId, UserPatchRequest request) {
-        throw new UnsupportedOperationException("patchUser is not implemented yet");
+  public UserResponse getUser(String userId) {
+    final UserRecord user =
+        userRepository
+            .findByUserId(userId)
+            .orElseThrow(() -> new IllegalArgumentException("user not found"));
+    final List<String> roles = roleRepository.findRolesByUserId(userId);
+    return toResponse(user, roles);
+  }
+
+  public UserResponse patchUser(String userId, UserPatchRequest request) {
+    if (request == null) {
+      throw new IllegalArgumentException("request is required");
     }
+    final UserRecord updated =
+        userRepository.updateProfile(userId, request.displayName(), request.locale());
+    final List<String> roles = roleRepository.findRolesByUserId(userId);
+    return toResponse(updated, roles);
+  }
+
+  private UserResponse toResponse(UserRecord user, List<String> roles) {
+    return new UserResponse(
+        user.userId(), user.displayName(), user.locale(), user.status().name(), roles);
+  }
 }

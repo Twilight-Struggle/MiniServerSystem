@@ -1,27 +1,35 @@
-/*
- * どこで: app/gateway-bff/src/main/java/com/example/gateway_bff/service/OidcLoginService.java
- * 何を: /login 開始処理(state/nonce 生成 + authorize URL 構築)を担当
- * なぜ: コントローラーから OIDC 開始ロジックを分離するため
- */
 package com.example.gateway_bff.service;
 
 import com.example.gateway_bff.api.response.LoginRedirectResponse;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
 
 @Service
 public class OidcLoginService {
 
-    /**
-     * 役割:
-     * - state/nonce を生成し、サーバーサイドセッションへ保存する。
-     * - Google OIDC の authorize URL を組み立てる。
-     *
-     * 期待動作:
-     * - response_type=code, scope=openid profile email を必須で含める。
-     * - state/nonce は十分なランダム性を持たせ、短時間で失効する。
-     * - 返却値には authorizationUrl と state を含め、テストで検証可能にする。
-     */
-    public LoginRedirectResponse prepareLogin() {
-        throw new UnsupportedOperationException("prepareLogin is not implemented yet");
-    }
+  public LoginRedirectResponse prepareLogin() {
+    final String state = UUID.randomUUID().toString();
+    final String nonce = UUID.randomUUID().toString();
+    final String redirectUri = encode("http://localhost:18080/callback");
+    final String url =
+        "https://accounts.google.com/o/oauth2/v2/auth"
+            + "?response_type=code"
+            + "&scope="
+            + encode("openid profile email")
+            + "&client_id="
+            + encode("dummy-client")
+            + "&redirect_uri="
+            + redirectUri
+            + "&state="
+            + encode(state)
+            + "&nonce="
+            + encode(nonce);
+    return new LoginRedirectResponse(url, state);
+  }
+
+  private String encode(String value) {
+    return URLEncoder.encode(value, StandardCharsets.UTF_8);
+  }
 }

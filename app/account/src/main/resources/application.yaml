@@ -4,6 +4,13 @@ server:
 spring:
   application:
     name: account
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    create-schemas: true
+    default-schema: account
+    schemas: account
+    table: flyway_schema_history_account
 
 management:
   endpoints:

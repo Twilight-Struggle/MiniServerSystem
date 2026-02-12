@@ -2,24 +2,3 @@ spring:
   config:
     activate:
       on-profile: ci
-
-account:
-  base-url: ${ACCOUNT_BASE_URL:http://account:80}
-
-oidc:
-  provider: google
-  issuer: ${OIDC_ISSUER:https://accounts.google.com}
-  authorization-endpoint: ${OIDC_AUTHORIZATION_ENDPOINT:https://accounts.google.com/o/oauth2/v2/auth}
-  token-endpoint: ${OIDC_TOKEN_ENDPOINT:https://oauth2.googleapis.com/token}
-  jwks-uri: ${OIDC_JWKS_URI:https://www.googleapis.com/oauth2/v3/certs}
-  client-id: ${OIDC_CLIENT_ID:}
-  client-secret: ${OIDC_CLIENT_SECRET:}
-  redirect-uri: ${OIDC_REDIRECT_URI:http://localhost:18080/callback}
-
-session:
-  ttl-seconds: 3600
-  cookie-name: MSS_SESSION
-  # CI では必要に応じて true へ切替可能にする
-  cookie-secure: false
-  cookie-same-site: Lax
-  cookie-domain: localhost

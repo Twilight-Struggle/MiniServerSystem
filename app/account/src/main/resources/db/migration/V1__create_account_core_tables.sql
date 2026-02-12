@@ -38,5 +38,4 @@ CREATE TABLE audit_logs (
 );
 
 CREATE INDEX identities_user_id_idx ON identities (user_id);
-CREATE INDEX users_status_idx ON users (status);
 CREATE INDEX audit_logs_target_created_idx ON audit_logs (target_user_id, created_at DESC);
