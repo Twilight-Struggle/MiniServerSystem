@@ -1,0 +1,4 @@
+spring:
+  # テストでは Testcontainers から注入される DataSource/Flyway 設定を使う
+  flyway:
+    enabled: true

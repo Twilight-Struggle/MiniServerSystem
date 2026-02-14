@@ -3,3 +3,5 @@ resources:
   - postgres.yaml
   - redis.yaml
   - nats.yaml
+  - keycloak.yaml
+  - keycloak-ingress.yaml

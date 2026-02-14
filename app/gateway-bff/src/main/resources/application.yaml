@@ -1,6 +1,24 @@
 server:
   port: 8080
 
+spring:
+  application:
+    name: gateway-bff
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak:
+            provider: keycloak
+            client-id: ${OIDC_CLIENT_ID:gateway-bff}
+            client-secret: ${OIDC_CLIENT_SECRET:}
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope: openid,profile,email
+        provider:
+          keycloak:
+            issuer-uri: ${OIDC_ISSUER:http://keycloak.localhost/realms/miniserversystem}
+
 management:
   endpoints:
     web:
@@ -10,3 +28,6 @@ management:
     health:
       probes:
         enabled: true
+
+account:
+  base-url: ${ACCOUNT_BASE_URL:http://account:80}
