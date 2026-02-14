@@ -16,14 +16,12 @@ public class GatewaySecurityConfig {
 
   @Bean
   SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-    http
-        .csrf(Customizer.withDefaults())
+    http.csrf(Customizer.withDefaults())
         .sessionManagement(
             session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
         .authorizeHttpRequests(
             auth ->
-                auth
-                    .requestMatchers("/", "/login", "/callback", "/actuator/health", "/actuator/info")
+                auth.requestMatchers("/", "/login", "/error", "/actuator/health", "/actuator/info")
                     .permitAll()
                     .requestMatchers("/v1/me")
                     .authenticated()
@@ -35,7 +33,8 @@ public class GatewaySecurityConfig {
             logout ->
                 logout
                     .logoutUrl("/logout")
-                    .logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler(HttpStatus.NO_CONTENT))
+                    .logoutSuccessHandler(
+                        new HttpStatusReturningLogoutSuccessHandler(HttpStatus.NO_CONTENT))
                     .invalidateHttpSession(true)
                     .deleteCookies("JSESSIONID"));
 

@@ -20,7 +20,8 @@ class OidcAuthenticatedUserServiceTest {
     final OidcAuthenticatedUserService service = new OidcAuthenticatedUserService(mapper, client);
     final Authentication auth = mock(Authentication.class);
     final OidcClaims claims =
-        new OidcClaims("keycloak", "sub-1", "a@example.com", true, "n", null, "iss", "aud", 1L, null);
+        new OidcClaims(
+            "keycloak", "sub-1", "a@example.com", true, "n", null, "iss", "aud", 1L, null);
     when(mapper.map(auth)).thenReturn(claims);
     when(client.resolveIdentity(claims))
         .thenReturn(new AuthenticatedUser("user-1", "ACTIVE", List.of("USER")));
@@ -37,7 +38,8 @@ class OidcAuthenticatedUserServiceTest {
     final OidcAuthenticatedUserService service = new OidcAuthenticatedUserService(mapper, client);
     final Authentication auth = mock(Authentication.class);
     final OidcClaims claims =
-        new OidcClaims("keycloak", "sub-1", "a@example.com", true, "n", null, "iss", "aud", 1L, null);
+        new OidcClaims(
+            "keycloak", "sub-1", "a@example.com", true, "n", null, "iss", "aud", 1L, null);
     when(mapper.map(auth)).thenReturn(claims);
     when(client.resolveIdentity(claims))
         .thenReturn(new AuthenticatedUser("user-1", "SUSPENDED", List.of("USER")));

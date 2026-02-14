@@ -1,10 +1,10 @@
 package com.example.gateway_bff.api;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oidcLogin;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -36,18 +36,7 @@ class AuthSecurityIntegrationTest {
 
   @Test
   void loginEndpointReturns302() throws Exception {
-    mockMvc
-        .perform(get("/login"))
-        .andExpect(status().isFound())
-        .andExpect(header().string("Location", "/oauth2/authorization/keycloak"));
-  }
-
-  @Test
-  void callbackCompatibilityEndpointIsAccessibleAndRedirectsToLogin() throws Exception {
-    mockMvc
-        .perform(get("/callback"))
-        .andExpect(status().isFound())
-        .andExpect(header().string("Location", "/login"));
+    mockMvc.perform(get("/login")).andExpect(status().isFound());
   }
 
   @Test
@@ -57,8 +46,12 @@ class AuthSecurityIntegrationTest {
 
   @Test
   void logoutWithCsrfReturns204() throws Exception {
-    mockMvc
-        .perform(post("/logout").with(csrf()))
-        .andExpect(status().isNoContent());
+    mockMvc.perform(post("/logout").with(csrf())).andExpect(status().isNoContent());
+  }
+
+  @Test
+  void errorEndpointIsAccessibleWithoutAuthentication() throws Exception {
+    final int statusCode = mockMvc.perform(get("/error")).andReturn().getResponse().getStatus();
+    assertThat(statusCode).isNotEqualTo(401);
   }
 }

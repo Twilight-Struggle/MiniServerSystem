@@ -2,7 +2,6 @@ package com.example.gateway_bff.api;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -31,19 +30,6 @@ class AuthControllerTest {
         .perform(get("/login"))
         .andExpect(status().isFound())
         .andExpect(header().string("Location", "/oauth2/authorization/keycloak"));
-  }
-
-  @Test
-  void callbackCompatibilityEndpointRedirectsToLogin() throws Exception {
-    mockMvc
-        .perform(get("/callback"))
-        .andExpect(status().isFound())
-        .andExpect(header().string("Location", "/login"));
-  }
-
-  @Test
-  void logoutReturnsNoContent() throws Exception {
-    mockMvc.perform(post("/logout")).andExpect(status().isNoContent());
   }
 
   @Test

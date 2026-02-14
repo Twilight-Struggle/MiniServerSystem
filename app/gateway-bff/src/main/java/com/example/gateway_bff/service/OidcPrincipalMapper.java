@@ -4,9 +4,9 @@ import com.example.gateway_bff.model.OidcClaims;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
-import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
 // Authentication をアプリ内 OidcClaims へ正規化する。
