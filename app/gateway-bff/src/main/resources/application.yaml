@@ -4,6 +4,20 @@ server:
 spring:
   application:
     name: gateway-bff
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak:
+            provider: keycloak
+            client-id: ${OIDC_CLIENT_ID:gateway-bff}
+            client-secret: ${OIDC_CLIENT_SECRET:}
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope: openid,profile,email
+        provider:
+          keycloak:
+            issuer-uri: ${OIDC_ISSUER:http://keycloak.localhost/realms/miniserversystem}
 
 management:
   endpoints:
@@ -17,20 +31,3 @@ management:
 
 account:
   base-url: ${ACCOUNT_BASE_URL:http://account:80}
-
-oidc:
-  provider: ${OIDC_PROVIDER:keycloak}
-  issuer: ${OIDC_ISSUER:http://keycloak.localhost/realms/miniserversystem}
-  authorization-endpoint: ${OIDC_AUTHORIZATION_ENDPOINT:http://keycloak.localhost/realms/miniserversystem/protocol/openid-connect/auth}
-  token-endpoint: ${OIDC_TOKEN_ENDPOINT:http://keycloak:8080/realms/miniserversystem/protocol/openid-connect/token}
-  jwks-uri: ${OIDC_JWKS_URI:http://keycloak:8080/realms/miniserversystem/protocol/openid-connect/certs}
-  client-id: ${OIDC_CLIENT_ID:}
-  client-secret: ${OIDC_CLIENT_SECRET:}
-  redirect-uri: ${OIDC_REDIRECT_URI:http://localhost:18080/callback}
-
-session:
-  ttl-seconds: 3600
-  cookie-name: MSS_SESSION
-  cookie-secure: false
-  cookie-same-site: Lax
-  cookie-domain: localhost

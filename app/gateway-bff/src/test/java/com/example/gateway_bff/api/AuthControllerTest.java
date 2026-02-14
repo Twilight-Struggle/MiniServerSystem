@@ -1,19 +1,15 @@
 package com.example.gateway_bff.api;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.gateway_bff.api.response.LoginRedirectResponse;
 import com.example.gateway_bff.model.AuthenticatedUser;
-import com.example.gateway_bff.service.OidcCallbackService;
-import com.example.gateway_bff.service.OidcLoginService;
-import com.example.gateway_bff.service.SessionService;
+import com.example.gateway_bff.service.OidcAuthenticatedUserService;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -27,54 +23,38 @@ class AuthControllerTest {
 
   @Autowired private MockMvc mockMvc;
 
-  @MockitoBean private OidcLoginService oidcLoginService;
-
-  @MockitoBean private OidcCallbackService oidcCallbackService;
-
-  @MockitoBean private SessionService sessionService;
+  @MockitoBean private OidcAuthenticatedUserService oidcAuthenticatedUserService;
 
   @Test
-  void loginReturnsRedirectInfo() throws Exception {
-    when(oidcLoginService.prepareLogin())
-        .thenReturn(new LoginRedirectResponse("https://example.com", "st"));
-
+  void loginReturns302ToAuthorizationEndpoint() throws Exception {
     mockMvc
         .perform(get("/login"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.state").value("st"));
+        .andExpect(status().isFound())
+        .andExpect(header().string("Location", "/oauth2/authorization/keycloak"));
   }
 
   @Test
-  void meReturnsUnauthorizedWhenSessionMissing() throws Exception {
-    mockMvc.perform(get("/me")).andExpect(status().isUnauthorized());
-  }
-
-  @Test
-  void meReturnsUserWhenSessionExists() throws Exception {
-    when(sessionService.findAuthenticatedUser(any()))
-        .thenReturn(Optional.of(new AuthenticatedUser("user-1", "ACTIVE", List.of("USER"))));
-
+  void callbackCompatibilityEndpointRedirectsToLogin() throws Exception {
     mockMvc
-        .perform(get("/me").cookie(new jakarta.servlet.http.Cookie("MSS_SESSION", "sid")))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.userId").value("user-1"));
-  }
-
-  @Test
-  void callbackReturnsNoContent() throws Exception {
-    when(oidcCallbackService.handleCallback("st", "cd"))
-        .thenReturn(new AuthenticatedUser("user-1", "ACTIVE", List.of("USER")));
-    when(sessionService.createSession(any())).thenReturn("sid");
-
-    mockMvc
-        .perform(get("/callback").param("state", "st").param("code", "cd"))
-        .andExpect(status().isNoContent());
+        .perform(get("/callback"))
+        .andExpect(status().isFound())
+        .andExpect(header().string("Location", "/login"));
   }
 
   @Test
   void logoutReturnsNoContent() throws Exception {
+    mockMvc.perform(post("/logout")).andExpect(status().isNoContent());
+  }
+
+  @Test
+  void meReturnsAuthenticatedUser() throws Exception {
+    when(oidcAuthenticatedUserService.resolveAuthenticatedUser(org.mockito.ArgumentMatchers.any()))
+        .thenReturn(new AuthenticatedUser("user-1", "ACTIVE", List.of("USER")));
+
     mockMvc
-        .perform(post("/logout").cookie(new jakarta.servlet.http.Cookie("MSS_SESSION", "sid")))
-        .andExpect(status().isNoContent());
+        .perform(get("/v1/me"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.userId").value("user-1"))
+        .andExpect(jsonPath("$.roles[0]").value("USER"));
   }
 }
