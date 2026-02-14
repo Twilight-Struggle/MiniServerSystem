@@ -10,16 +10,22 @@ class OidcTokenVerifierTest {
 
   @Test
   void verifyRejectsBlankToken() {
-    final OidcTokenVerifier verifier = new OidcTokenVerifier();
+    final OidcTokenVerifier verifier =
+        new OidcTokenVerifier(
+            "keycloak", "http://keycloak.localhost/realms/miniserversystem", "gateway-bff");
     assertThatThrownBy(() -> verifier.verify("", "nonce"))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
   void verifyReturnsClaims() {
-    final OidcTokenVerifier verifier = new OidcTokenVerifier();
+    final OidcTokenVerifier verifier =
+        new OidcTokenVerifier(
+            "keycloak", "http://keycloak.localhost/realms/miniserversystem", "gateway-bff");
     final OidcClaims claims = verifier.verify("token", "nonce");
-    assertThat(claims.provider()).isEqualTo("google");
+    assertThat(claims.provider()).isEqualTo("keycloak");
+    assertThat(claims.issuer()).isEqualTo("http://keycloak.localhost/realms/miniserversystem");
+    assertThat(claims.audience()).isEqualTo("gateway-bff");
     assertThat(claims.nonce()).isEqualTo("nonce");
   }
 }

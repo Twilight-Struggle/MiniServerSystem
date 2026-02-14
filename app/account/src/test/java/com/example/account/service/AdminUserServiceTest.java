@@ -10,6 +10,7 @@ import com.example.account.model.AuditLogRecord;
 import com.example.account.model.UserRecord;
 import com.example.account.repository.AuditLogRepository;
 import com.example.account.repository.UserRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
@@ -49,7 +50,7 @@ class AdminUserServiceTest {
   }
 
   @Test
-  void suspendUpdatesStatusAndWritesAuditLog() throws Exception {
+  void suspendUpdatesStatusAndWritesAuditLog() throws JsonProcessingException {
     when(userRepository.updateStatus(eq("user-1"), eq("SUSPENDED")))
         .thenReturn(
             Optional.of(
@@ -66,7 +67,7 @@ class AdminUserServiceTest {
   }
 
   @Test
-  void suspendEscapesReasonForAuditMetadataJson() throws Exception {
+  void suspendEscapesReasonForAuditMetadataJson() throws JsonProcessingException {
     when(userRepository.updateStatus(eq("user-1"), eq("SUSPENDED")))
         .thenReturn(
             Optional.of(
