@@ -5,7 +5,6 @@ import org.springframework.stereotype.Service;
 
 // 旧トークン検証互換。削除予定。
 @Service
-@Deprecated(forRemoval = true)
 public class OidcTokenVerifier {
 
   public OidcTokenVerifier() {}

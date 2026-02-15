@@ -5,7 +5,6 @@ import org.springframework.stereotype.Service;
 
 // 旧コールバックAPI互換。削除予定。
 @Service
-@Deprecated(forRemoval = true)
 public class OidcCallbackService {
 
   public AuthenticatedUser handleCallback(String state, String code) {

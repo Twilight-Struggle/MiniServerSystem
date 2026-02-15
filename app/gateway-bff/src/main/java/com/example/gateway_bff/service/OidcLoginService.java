@@ -5,7 +5,6 @@ import org.springframework.stereotype.Service;
 
 // 旧ログインAPI互換。削除予定。
 @Service
-@Deprecated(forRemoval = true)
 public class OidcLoginService {
 
   public OidcLoginService() {}
