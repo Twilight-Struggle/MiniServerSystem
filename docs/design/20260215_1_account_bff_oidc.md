@@ -118,11 +118,6 @@
   - `GatewayApiExceptionHandler` で `502/504` + エラーコードに変換
 - `accountStatus != ACTIVE` は `AccountInactiveException` として `403 ACCOUNT_INACTIVE`
 
-### 旧 OIDC クラスの扱い
-- `OidcLoginService` / `OidcTokenVerifier` / `OidcCallbackService` は互換クラスとして残置
-- 実処理は廃止し、呼び出し時は `UnsupportedOperationException` を返す
-- 実際の認証フローは Spring Security に完全移譲
-
 ## Keycloak 導入(ローカル/CI)
 ### インフラ
 - `deploy/kustomize/infra/base/keycloak.yaml`
