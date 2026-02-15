@@ -90,7 +90,7 @@ kubectl -n miniserversystem get ingress keycloak
 2. Client を `gateway-bff` で作成する
 3. Client 設定:
    - Client authentication: `ON`
-   - Valid redirect URIs: `http://localhost:18080/callback`
+   - Valid redirect URIs: `http://localhost:18080/login/oauth2/code/keycloak`
    - Web origins: `http://localhost:18080`
 4. Test user を1人作成し、パスワードを設定する
 
@@ -105,7 +105,7 @@ make dev
 1. `http://localhost:18080/login` へアクセス
 2. Keycloak ログイン画面へ遷移することを確認
 3. テストユーザーでログイン
-4. `callback` 後に 204 が返ることを確認
+4. 認証後に `GET http://localhost:18080/v1/me` が 200 でユーザー情報を返すことを確認
 
 ### 5. OIDC疎通確認(切り分け用)
 以下が 200 で返ることを確認する:
