@@ -7,9 +7,9 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oidcLogin;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 
 import com.example.gateway_bff.model.AuthenticatedUser;
 import com.example.gateway_bff.service.OidcAuthenticatedUserService;
@@ -65,7 +65,10 @@ class AuthSecurityIntegrationTest {
     mockMvc
         .perform(get("/oauth2/authorization/keycloak"))
         .andExpect(status().isFound())
-        .andExpect(header().string("Location", org.hamcrest.Matchers.startsWith("http://localhost/authorize")));
+        .andExpect(
+            header()
+                .string(
+                    "Location", org.hamcrest.Matchers.startsWith("http://localhost/authorize")));
   }
 
   @Test

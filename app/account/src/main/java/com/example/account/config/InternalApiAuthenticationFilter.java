@@ -48,7 +48,8 @@ public class InternalApiAuthenticationFilter extends OncePerRequestFilter {
   }
 
   private boolean isResolveIdentityRequest(HttpServletRequest request) {
-    return "POST".equals(request.getMethod()) && "/identities:resolve".equals(request.getRequestURI());
+    return "POST".equals(request.getMethod())
+        && "/identities:resolve".equals(request.getRequestURI());
   }
 
   private boolean isUsersRequest(HttpServletRequest request) {
@@ -86,7 +87,9 @@ public class InternalApiAuthenticationFilter extends OncePerRequestFilter {
         return null;
       }
       return new UsernamePasswordAuthenticationToken(
-          forwardedUserId, "N/A", buildAuthorities(request.getHeader(properties.userRolesHeaderName())));
+          forwardedUserId,
+          "N/A",
+          buildAuthorities(request.getHeader(properties.userRolesHeaderName())));
     }
 
     return null;

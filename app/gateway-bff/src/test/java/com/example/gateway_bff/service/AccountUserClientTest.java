@@ -102,7 +102,10 @@ class AccountUserClientTest {
   @Test
   void getUserMaps401ToUnauthorizedException() {
     final ClientFixture fixture = newFixture();
-    fixture.server.expect(requestTo("http://account.test/users/user-1")).andRespond(withStatus(HttpStatus.UNAUTHORIZED));
+    fixture
+        .server
+        .expect(requestTo("http://account.test/users/user-1"))
+        .andRespond(withStatus(HttpStatus.UNAUTHORIZED));
 
     assertThatThrownBy(() -> fixture.client.getUser("user-1", REQUESTER))
         .isInstanceOf(AccountIntegrationException.class)
@@ -113,7 +116,10 @@ class AccountUserClientTest {
   @Test
   void getUserMaps403ToForbiddenException() {
     final ClientFixture fixture = newFixture();
-    fixture.server.expect(requestTo("http://account.test/users/user-1")).andRespond(withStatus(HttpStatus.FORBIDDEN));
+    fixture
+        .server
+        .expect(requestTo("http://account.test/users/user-1"))
+        .andRespond(withStatus(HttpStatus.FORBIDDEN));
 
     assertThatThrownBy(() -> fixture.client.getUser("user-1", REQUESTER))
         .isInstanceOf(AccountIntegrationException.class)
@@ -124,7 +130,10 @@ class AccountUserClientTest {
   @Test
   void getUserMaps404ToNotFoundException() {
     final ClientFixture fixture = newFixture();
-    fixture.server.expect(requestTo("http://account.test/users/user-1")).andRespond(withStatus(HttpStatus.NOT_FOUND));
+    fixture
+        .server
+        .expect(requestTo("http://account.test/users/user-1"))
+        .andRespond(withStatus(HttpStatus.NOT_FOUND));
 
     assertThatThrownBy(() -> fixture.client.getUser("user-1", REQUESTER))
         .isInstanceOf(AccountIntegrationException.class)
@@ -135,7 +144,10 @@ class AccountUserClientTest {
   @Test
   void getUserMaps5xxToBadGatewayException() {
     final ClientFixture fixture = newFixture();
-    fixture.server.expect(requestTo("http://account.test/users/user-1")).andRespond(withServerError());
+    fixture
+        .server
+        .expect(requestTo("http://account.test/users/user-1"))
+        .andRespond(withServerError());
 
     assertThatThrownBy(() -> fixture.client.getUser("user-1", REQUESTER))
         .isInstanceOf(AccountIntegrationException.class)
