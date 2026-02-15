@@ -33,6 +33,11 @@ class AuthSecurityIntegrationTest {
   }
 
   @Test
+  void unauthenticatedUsersReturns401() throws Exception {
+    mockMvc.perform(get("/v1/users/user-1")).andExpect(status().isUnauthorized());
+  }
+
+  @Test
   void authenticatedMeReturns200() throws Exception {
     when(oidcAuthenticatedUserService.resolveAuthenticatedUser(any()))
         .thenReturn(new AuthenticatedUser("user-1", "ACTIVE", List.of("USER")));

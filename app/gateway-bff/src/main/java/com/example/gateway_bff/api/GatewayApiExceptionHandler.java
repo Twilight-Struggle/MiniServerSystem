@@ -25,6 +25,9 @@ public class GatewayApiExceptionHandler {
       case FORBIDDEN ->
           ResponseEntity.status(HttpStatus.BAD_GATEWAY)
               .body(new ApiErrorResponse("ACCOUNT_FORBIDDEN", ex.getMessage()));
+      case NOT_FOUND ->
+          ResponseEntity.status(HttpStatus.NOT_FOUND)
+              .body(new ApiErrorResponse("ACCOUNT_NOT_FOUND", ex.getMessage()));
       case TIMEOUT ->
           ResponseEntity.status(HttpStatus.GATEWAY_TIMEOUT)
               .body(new ApiErrorResponse("ACCOUNT_TIMEOUT", ex.getMessage()));

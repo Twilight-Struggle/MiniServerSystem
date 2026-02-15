@@ -5,6 +5,7 @@ public class AccountIntegrationException extends RuntimeException {
   public enum Reason {
     UNAUTHORIZED,
     FORBIDDEN,
+    NOT_FOUND,
     BAD_GATEWAY,
     TIMEOUT,
     INVALID_RESPONSE

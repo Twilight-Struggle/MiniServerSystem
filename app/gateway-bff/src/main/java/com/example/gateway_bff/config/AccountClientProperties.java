@@ -7,7 +7,11 @@ public record AccountClientProperties(
     String baseUrl,
     String internalApiToken,
     String internalApiHeaderName,
-    String resolveIdentityPath) {
+    String resolveIdentityPath,
+    String getUserPath,
+    String patchUserPath,
+    String userIdHeaderName,
+    String userRolesHeaderName) {
 
   public AccountClientProperties {
     baseUrl = baseUrl == null ? "http://account:80" : baseUrl;
@@ -20,5 +24,14 @@ public record AccountClientProperties(
         resolveIdentityPath == null || resolveIdentityPath.isBlank()
             ? "/identities:resolve"
             : resolveIdentityPath;
+    getUserPath = getUserPath == null || getUserPath.isBlank() ? "/users/{userId}" : getUserPath;
+    patchUserPath =
+        patchUserPath == null || patchUserPath.isBlank() ? "/users/{userId}" : patchUserPath;
+    userIdHeaderName =
+        userIdHeaderName == null || userIdHeaderName.isBlank() ? "X-User-Id" : userIdHeaderName;
+    userRolesHeaderName =
+        userRolesHeaderName == null || userRolesHeaderName.isBlank()
+            ? "X-User-Roles"
+            : userRolesHeaderName;
   }
 }

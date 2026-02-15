@@ -87,6 +87,46 @@ class AccountSecurityConfigTest {
   }
 
   @Test
+  void usersEndpointAllowsInternalOwnerWithHeaders() throws Exception {
+    when(userService.getUser("user-1"))
+        .thenReturn(new UserResponse("user-1", "n", "ja", "ACTIVE", List.of("USER")));
+
+    mockMvc
+        .perform(
+            get("/users/user-1")
+                .header("X-Internal-Token", "test-internal-token")
+                .header("X-User-Id", "user-1"))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  void usersEndpointRejectsInternalNonOwnerWithHeaders() throws Exception {
+    mockMvc
+        .perform(
+            get("/users/user-2")
+                .header("X-Internal-Token", "test-internal-token")
+                .header("X-User-Id", "user-1"))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void usersEndpointRejectsWhenInternalUserIdHeaderMissing() throws Exception {
+    mockMvc
+        .perform(get("/users/user-1").header("X-Internal-Token", "test-internal-token"))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void usersEndpointRejectsWhenInternalTokenIsInvalid() throws Exception {
+    mockMvc
+        .perform(
+            get("/users/user-1")
+                .header("X-Internal-Token", "wrong-token")
+                .header("X-User-Id", "user-1"))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
   void usersEndpointRejectsNonOwner() throws Exception {
     mockMvc
         .perform(get("/users/user-2").with(user("user-1").roles("USER")))
@@ -114,6 +154,22 @@ class AccountSecurityConfigTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body))
         .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void patchUsersEndpointAllowsInternalOwnerWithHeaders() throws Exception {
+    final String body = objectMapper.writeValueAsString(new UserPatchRequest("n2", "en"));
+    when(userService.patchUser(any(), any(UserPatchRequest.class)))
+        .thenReturn(new UserResponse("user-1", "n2", "en", "ACTIVE", List.of("USER")));
+
+    mockMvc
+        .perform(
+            patch("/users/user-1")
+                .header("X-Internal-Token", "test-internal-token")
+                .header("X-User-Id", "user-1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+        .andExpect(status().isOk());
   }
 
   @Test
