@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 
 import com.example.gateway_bff.model.AuthenticatedUser;
 import com.example.gateway_bff.service.OidcAuthenticatedUserService;
@@ -52,6 +53,19 @@ class AuthSecurityIntegrationTest {
   @Test
   void loginEndpointReturns302() throws Exception {
     mockMvc.perform(get("/login")).andExpect(status().isFound());
+  }
+
+  @Test
+  void loginWithErrorReturns401() throws Exception {
+    mockMvc.perform(get("/login").param("error", "true")).andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void oauth2AuthorizationEndpointRedirectsToProvider() throws Exception {
+    mockMvc
+        .perform(get("/oauth2/authorization/keycloak"))
+        .andExpect(status().isFound())
+        .andExpect(header().string("Location", org.hamcrest.Matchers.startsWith("http://localhost/authorize")));
   }
 
   @Test

@@ -36,6 +36,11 @@ class AuthControllerTest {
   }
 
   @Test
+  void loginWithErrorReturns401WithoutRedirect() throws Exception {
+    mockMvc.perform(get("/login").param("error", "true")).andExpect(status().isUnauthorized());
+  }
+
+  @Test
   void meReturnsAuthenticatedUser() throws Exception {
     when(oidcAuthenticatedUserService.resolveAuthenticatedUser(org.mockito.ArgumentMatchers.any()))
         .thenReturn(new AuthenticatedUser("user-1", "ACTIVE", List.of("USER")));

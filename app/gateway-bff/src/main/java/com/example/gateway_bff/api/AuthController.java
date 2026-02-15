@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -20,7 +21,11 @@ public class AuthController {
   private final OidcAuthenticatedUserService oidcAuthenticatedUserService;
 
   @GetMapping("/login")
-  public ResponseEntity<Void> login() {
+  public ResponseEntity<Void> login(
+      @RequestParam(name = "error", required = false) String error) {
+    if (error != null) {
+      return ResponseEntity.status(401).build();
+    }
     return ResponseEntity.status(302).location(OIDC_AUTHORIZATION_URI).build();
   }
 

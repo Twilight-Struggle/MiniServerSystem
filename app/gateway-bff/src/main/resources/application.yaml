@@ -19,8 +19,8 @@ spring:
           keycloak:
             authorization-uri: ${OIDC_AUTHORIZATION_URI:http://keycloak.localhost/realms/miniserversystem/protocol/openid-connect/auth}
             token-uri: ${OIDC_TOKEN_URI:http://keycloak:8080/realms/miniserversystem/protocol/openid-connect/token}
-            user-info-uri: ${OIDC_USER_INFO_URI:http://keycloak:8080/realms/miniserversystem/protocol/openid-connect/userinfo}
             jwk-set-uri: ${OIDC_JWK_SET_URI:http://keycloak:8080/realms/miniserversystem/protocol/openid-connect/certs}
+            user-name-attribute: sub
 
 management:
   endpoints:
