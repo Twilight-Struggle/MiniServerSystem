@@ -2,22 +2,24 @@
 
 ## 目標
 - `account` サービスをユーザー正本として追加する
-- `gateway-bff` にログイン導線と認証済みユーザー取得APIを追加する
-- 外部Google依存を避け、ローカル/CIで Keycloak を OIDC Provider として使えるようにする
-- 最低限の RBAC と監査ログを保持できる状態まで持っていく
+- `gateway-bff` にログイン導線と認証済みユーザー取得 API を追加する
+- 外部 Google 依存を避け、ローカル/CI で Keycloak を OIDC Provider として使えるようにする
+- `gateway-bff -> account` を内部 API として接続し、最低限の認可・障害ハンドリングを入れる
 
-## 全体データフロー
+## 全体データフロー(最終)
 1. ブラウザが `GET /login` (`gateway-bff`) を呼ぶ
-2. `gateway-bff` は `302 /oauth2/authorization/keycloak` を返し、Spring Security が OIDC 認可フローを開始
-3. Keycloak 認証後、`/login/oauth2/code/keycloak` に戻る(コールバック処理はSpring Securityが担当)
+2. `gateway-bff` は `302 /oauth2/authorization/keycloak` を返す
+3. Keycloak 認証後、`/login/oauth2/code/keycloak` に戻る(コールバックは Spring Security が処理)
 4. `GET /v1/me` で `Authentication` を `OidcPrincipalMapper` が `OidcClaims` に正規化
-5. `AccountResolveClient` が claims から業務ユーザーへ解決し、`accountStatus=ACTIVE` のみ通す
-6. `MeResponse` として `userId/accountStatus/roles` を返す
+5. `AccountResolveClient` が `POST /identities:resolve` を `account` に呼び出す
+6. `account` が `provider+subject` を同定し、`userId/accountStatus/roles` を返す
+7. `gateway-bff` は `accountStatus=ACTIVE` のみ許可し、`MeResponse` を返す
 
 ## Account app
-### 入口API
+### 入口 API
 #### 同定(解決)
 - `POST /identities:resolve`
+- header: `X-Internal-Token` (デフォルト。`account.internal-api.header-name` で変更可能)
 - request
 ```json
 {
@@ -71,14 +73,23 @@
   - `identities_user_id_idx`
   - `audit_logs_target_created_idx`
 
-### セキュリティ
-- `account` 側は現時点で全エンドポイント `permitAll`
+### セキュリティ(更新点)
+- `POST /identities:resolve`:
+  - `InternalApiAuthenticationFilter` で `X-Internal-Token` を検証
+  - 一致時のみ `ROLE_INTERNAL` 付与
+  - 未設定/不一致時は `403`
+- `GET/PATCH /users/{userId}`:
+  - `UserOwnershipAuthorizationManager` で所有者のみ許可
+  - `ROLE_ADMIN` は他人の `userId` にもアクセス可能
+- `/admin/**`:
+  - `ROLE_ADMIN` 必須
+- `/`, `/error`, `/actuator/health`, `/actuator/info` は `permitAll`
 
 ## Gateway-BFF app
-### 入口API
-- `GET /login`: Keycloak認可エンドポイントへ遷移させるための 302 を返す
+### 入口 API
+- `GET /login`: Keycloak 認可エンドポイントへ遷移させるための `302`
 - `GET /v1/me`: 認証済みユーザー情報を返す
-- `GET /v1/users/{userId}/profile`: account/entitlement/notification の集約用スケルトン
+- `GET /v1/users/{userId}/profile`: account/entitlement/matchmaking の集約スケルトン
 
 ### 認証・認可方針
 - Spring Security + `spring-boot-starter-oauth2-client`
@@ -88,7 +99,7 @@
 - 許可済みパス:
   - `/`, `/login`, `/error`, `/actuator/health`, `/actuator/info`
 - logout:
-  - `POST /logout`、CSRFありで `204`、CSRFなしは `403`
+  - `POST /logout`、CSRF ありで `204`、CSRF なしは `403`
 
 ### OIDC claims 正規化
 `OidcPrincipalMapper` で以下を抽出:
@@ -96,23 +107,29 @@
 - `sub`, `email`, `email_verified`, `name`, `picture`
 - `issuer`, `aud`, `exp`, `nonce`
 
-### Account 連携
+### Account 連携(更新点)
 - `OidcAuthenticatedUserService` が `OidcClaims` を `AccountResolveClient` に渡して業務ユーザーへ解決
-- 現時点の `AccountResolveClient` は暫定実装:
-  - `userId=subject`, `accountStatus=ACTIVE`, `roles=[USER]` を返す
-  - 実HTTP連携( `account` の `/identities:resolve` 呼び出し)は未実装
+- `AccountResolveClient` は `RestClient` で `account` の `/identities:resolve` を実呼び出し
+- 内部ヘッダーを付与:
+  - header名: `ACCOUNT_INTERNAL_API_HEADER_NAME` (既定 `X-Internal-Token`)
+  - token: `ACCOUNT_INTERNAL_API_TOKEN`
+- 障害時の扱い:
+  - account `401/403/5xx`、通信失敗、タイムアウト、不正レスポンスを `AccountIntegrationException` に正規化
+  - `GatewayApiExceptionHandler` で `502/504` + エラーコードに変換
+- `accountStatus != ACTIVE` は `AccountInactiveException` として `403 ACCOUNT_INACTIVE`
 
-### 後方互換の扱い
-- 旧JSONベースログイン処理 (`OidcLoginService`, `OidcTokenVerifier`, `OidcCallbackService`) は
-  `@Deprecated(forRemoval=true)` とし、実処理はSpring Security側へ移譲
+### 旧 OIDC クラスの扱い
+- `OidcLoginService` / `OidcTokenVerifier` / `OidcCallbackService` は互換クラスとして残置
+- 実処理は廃止し、呼び出し時は `UnsupportedOperationException` を返す
+- 実際の認証フローは Spring Security に完全移譲
 
-## Keycloak導入(ローカル/CI)
+## Keycloak 導入(ローカル/CI)
 ### インフラ
 - `deploy/kustomize/infra/base/keycloak.yaml`
   - Keycloak `Deployment` / `Service` を追加
   - `quay.io/keycloak/keycloak:26.0`, `start-dev`
 - `deploy/kustomize/infra/base/keycloak-ingress.yaml`
-  - `keycloak.localhost` でブラウザアクセス可能にする
+  - `keycloak.localhost` でブラウザアクセス可能
 
 ### アプリ設定
 - `gateway-bff`:
@@ -121,7 +138,7 @@
 - Helm values:
   - local: `OIDC_ISSUER=http://keycloak.localhost/realms/miniserversystem`
   - ci: `OIDC_ISSUER=http://keycloak:8080/realms/miniserversystem`
-  - 共通で `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` を注入
+  - 共通で `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `ACCOUNT_INTERNAL_API_TOKEN` を注入
 
 ### 運用手順
 - `docs/task/deploy.md` に以下を追加
@@ -132,14 +149,16 @@
 
 ## テスト方針と実装
 - `account`:
-  - Service層の単体テスト(同定、競合時フォールバック、suspend監査ログ)
-  - Repository統合テスト(Testcontainers + Postgres)
+  - Service 層単体テスト(同定、競合時フォールバック、suspend 監査ログ)
+  - Repository 統合テスト(Testcontainers + Postgres)
+  - Security テスト(内部トークン、所有者制御、admin 制御)
 - `gateway-bff`:
-  - Controllerテスト(`/login`, `/v1/me`)
-  - Security統合テスト(401/302/logout時のCSRF挙動)
+  - Controller テスト(`/login`, `/v1/me`)
+  - Security 統合テスト(401/302/logout 時の CSRF 挙動)
   - OIDC claims 正規化、認証ユーザー解決の単体テスト
+  - `AccountResolveClient` の異常系テスト(401/403/5xx/timeout/invalid response)
 
 ## 既知のギャップ(次フェーズ)
-- `gateway-bff` -> `account` の実HTTP連携が未接続(現在はスタブ)
-- `account` のエンドポイント認可は未実装(`permitAll`)
-- `profile` 集約はプレースホルダー(Map返却)で実データ統合は未着手
+- `/v1/users/{userId}/profile` はまだプレースホルダー(Map返却)で、実データ集約は未着手
+- `account` の内部 API 認証は共有トークン方式のため、将来は mTLS/JWT などへ強化余地あり
+- `gateway-bff` から account 呼び出しのリトライ/サーキットブレーカーは未実装
