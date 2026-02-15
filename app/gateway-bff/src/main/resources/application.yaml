@@ -31,3 +31,6 @@ management:
 
 account:
   base-url: ${ACCOUNT_BASE_URL:http://account:80}
+  internal-api-token: ${ACCOUNT_INTERNAL_API_TOKEN:}
+  internal-api-header-name: ${ACCOUNT_INTERNAL_API_HEADER_NAME:X-Internal-Token}
+  resolve-identity-path: ${ACCOUNT_RESOLVE_IDENTITY_PATH:/identities:resolve}

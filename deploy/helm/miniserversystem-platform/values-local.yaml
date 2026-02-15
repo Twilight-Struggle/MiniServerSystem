@@ -16,6 +16,7 @@ app:
       OIDC_ISSUER: http://keycloak.localhost/realms/miniserversystem
       OIDC_CLIENT_ID: gateway-bff
       OIDC_CLIENT_SECRET: changeit
+      ACCOUNT_INTERNAL_API_TOKEN: changeit-internal
 
   account:
     enabled: true
@@ -29,6 +30,7 @@ app:
       POSTGRES_DB: miniserversystem
       POSTGRES_USER: miniserversystem
       POSTGRES_PASSWORD: miniserversystem
+      ACCOUNT_INTERNAL_API_TOKEN: changeit-internal
 
   entitlement:
     enabled: true

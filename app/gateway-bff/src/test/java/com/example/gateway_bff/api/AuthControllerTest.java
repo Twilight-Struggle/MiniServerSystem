@@ -7,17 +7,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.gateway_bff.model.AuthenticatedUser;
+import com.example.gateway_bff.service.AccountInactiveException;
 import com.example.gateway_bff.service.OidcAuthenticatedUserService;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(AuthController.class)
 @AutoConfigureMockMvc(addFilters = false)
+@Import(GatewayApiExceptionHandler.class)
 class AuthControllerTest {
 
   @Autowired private MockMvc mockMvc;
@@ -42,5 +45,13 @@ class AuthControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.userId").value("user-1"))
         .andExpect(jsonPath("$.roles[0]").value("USER"));
+  }
+
+  @Test
+  void meReturns403WhenAccountIsSuspended() throws Exception {
+    when(oidcAuthenticatedUserService.resolveAuthenticatedUser(org.mockito.ArgumentMatchers.any()))
+        .thenThrow(new AccountInactiveException("account is not active"));
+
+    mockMvc.perform(get("/v1/me")).andExpect(status().isForbidden());
   }
 }

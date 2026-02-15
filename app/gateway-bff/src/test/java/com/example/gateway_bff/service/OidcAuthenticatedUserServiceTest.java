@@ -45,7 +45,7 @@ class OidcAuthenticatedUserServiceTest {
         .thenReturn(new AuthenticatedUser("user-1", "SUSPENDED", List.of("USER")));
 
     assertThatThrownBy(() -> service.resolveAuthenticatedUser(auth))
-        .isInstanceOf(IllegalStateException.class)
+        .isInstanceOf(AccountInactiveException.class)
         .hasMessage("account is not active");
   }
 }

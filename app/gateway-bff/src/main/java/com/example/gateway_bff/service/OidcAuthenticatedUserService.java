@@ -18,7 +18,7 @@ public class OidcAuthenticatedUserService {
     final OidcClaims claims = oidcPrincipalMapper.map(authentication);
     final AuthenticatedUser user = accountResolveClient.resolveIdentity(claims);
     if (!"ACTIVE".equals(user.accountStatus())) {
-      throw new IllegalStateException("account is not active");
+      throw new AccountInactiveException("account is not active");
     }
     return user;
   }
