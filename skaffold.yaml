@@ -48,16 +48,16 @@ deploy:
         valuesFiles:
           - deploy/helm/miniserversystem-platform/values-local.yaml
         setValueTemplates:
-          services.gateway.image.repository: "{{.IMAGE_REPO_gateway_bff}}"
-          services.gateway.image.tag: "{{.IMAGE_TAG_gateway_bff}}"
-          services.account.image.repository: "{{.IMAGE_REPO_account}}"
-          services.account.image.tag: "{{.IMAGE_TAG_account}}"
-          services.entitlement.image.repository: "{{.IMAGE_REPO_entitlement}}"
-          services.entitlement.image.tag: "{{.IMAGE_TAG_entitlement}}"
-          services.matchmaking.image.repository: "{{.IMAGE_REPO_matchmaking}}"
-          services.matchmaking.image.tag: "{{.IMAGE_TAG_matchmaking}}"
-          services.notification.image.repository: "{{.IMAGE_REPO_notification}}"
-          services.notification.image.tag: "{{.IMAGE_TAG_notification}}"
+          app.gateway.image.repository: "{{.IMAGE_REPO_gateway_bff}}"
+          app.gateway.image.tag: "{{.IMAGE_TAG_gateway_bff}}"
+          app.account.image.repository: "{{.IMAGE_REPO_account}}"
+          app.account.image.tag: "{{.IMAGE_TAG_account}}"
+          app.entitlement.image.repository: "{{.IMAGE_REPO_entitlement}}"
+          app.entitlement.image.tag: "{{.IMAGE_TAG_entitlement}}"
+          app.matchmaking.image.repository: "{{.IMAGE_REPO_matchmaking}}"
+          app.matchmaking.image.tag: "{{.IMAGE_TAG_matchmaking}}"
+          app.notification.image.repository: "{{.IMAGE_REPO_notification}}"
+          app.notification.image.tag: "{{.IMAGE_TAG_notification}}"
         setValues:
           global.imagePullPolicy: IfNotPresent
         wait: true

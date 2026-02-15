@@ -69,4 +69,11 @@ class AuthSecurityIntegrationTest {
     final int statusCode = mockMvc.perform(get("/error")).andReturn().getResponse().getStatus();
     assertThat(statusCode).isNotEqualTo(401);
   }
+
+  @Test
+  void actuatorReadinessIsAccessibleWithoutAuthentication() throws Exception {
+    final int statusCode =
+        mockMvc.perform(get("/actuator/health/readiness")).andReturn().getResponse().getStatus();
+    assertThat(statusCode).isNotEqualTo(401);
+  }
 }

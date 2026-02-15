@@ -38,7 +38,12 @@ public class AccountSecurityConfig {
         .addFilterBefore(internalApiAuthenticationFilter, AuthorizationFilter.class)
         .authorizeHttpRequests(
             auth ->
-                auth.requestMatchers("/", "/error", "/actuator/health", "/actuator/info")
+                auth.requestMatchers(
+                        "/",
+                        "/error",
+                        "/actuator/health",
+                        "/actuator/health/**",
+                        "/actuator/info")
                     .permitAll()
                     .requestMatchers(HttpMethod.POST, "/identities:resolve")
                     .hasRole("INTERNAL")

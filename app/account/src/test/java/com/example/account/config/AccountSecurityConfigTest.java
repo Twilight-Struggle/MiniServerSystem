@@ -194,4 +194,9 @@ class AccountSecurityConfigTest {
                 .param("reason", "test"))
         .andExpect(status().isNoContent());
   }
+
+  @Test
+  void actuatorReadinessEndpointIsNotBlockedBySecurity() throws Exception {
+    mockMvc.perform(get("/actuator/health/readiness")).andExpect(status().isNotFound());
+  }
 }

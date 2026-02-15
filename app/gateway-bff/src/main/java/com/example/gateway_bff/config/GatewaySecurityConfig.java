@@ -21,7 +21,13 @@ public class GatewaySecurityConfig {
             session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
         .authorizeHttpRequests(
             auth ->
-                auth.requestMatchers("/", "/login", "/error", "/actuator/health", "/actuator/info")
+                auth.requestMatchers(
+                        "/",
+                        "/login",
+                        "/error",
+                        "/actuator/health",
+                        "/actuator/health/**",
+                        "/actuator/info")
                     .permitAll()
                     .requestMatchers("/v1/me")
                     .authenticated()

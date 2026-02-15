@@ -129,10 +129,21 @@
 ### アプリ設定
 - `gateway-bff`:
   - `spring.security.oauth2.client.registration.keycloak`
-  - `spring.security.oauth2.client.provider.keycloak.issuer-uri=${OIDC_ISSUER}`
+  - `spring.security.oauth2.client.provider.keycloak.authorization-uri=${OIDC_AUTHORIZATION_URI}`
+  - `spring.security.oauth2.client.provider.keycloak.token-uri=${OIDC_TOKEN_URI}`
+  - `spring.security.oauth2.client.provider.keycloak.user-info-uri=${OIDC_USER_INFO_URI}`
+  - `spring.security.oauth2.client.provider.keycloak.jwk-set-uri=${OIDC_JWK_SET_URI}`
 - Helm values:
-  - local: `OIDC_ISSUER=http://keycloak.localhost/realms/miniserversystem`
-  - ci: `OIDC_ISSUER=http://keycloak:8080/realms/miniserversystem`
+  - local:
+    - `OIDC_AUTHORIZATION_URI=http://keycloak.localhost/realms/miniserversystem/protocol/openid-connect/auth`
+    - `OIDC_TOKEN_URI=http://keycloak:8080/realms/miniserversystem/protocol/openid-connect/token`
+    - `OIDC_USER_INFO_URI=http://keycloak:8080/realms/miniserversystem/protocol/openid-connect/userinfo`
+    - `OIDC_JWK_SET_URI=http://keycloak:8080/realms/miniserversystem/protocol/openid-connect/certs`
+  - ci:
+    - `OIDC_AUTHORIZATION_URI=http://keycloak:8080/realms/miniserversystem/protocol/openid-connect/auth`
+    - `OIDC_TOKEN_URI=http://keycloak:8080/realms/miniserversystem/protocol/openid-connect/token`
+    - `OIDC_USER_INFO_URI=http://keycloak:8080/realms/miniserversystem/protocol/openid-connect/userinfo`
+    - `OIDC_JWK_SET_URI=http://keycloak:8080/realms/miniserversystem/protocol/openid-connect/certs`
   - 共通で `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `ACCOUNT_INTERNAL_API_TOKEN` を注入
 
 ### 運用手順
