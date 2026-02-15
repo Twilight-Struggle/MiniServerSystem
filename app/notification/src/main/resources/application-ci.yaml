@@ -7,6 +7,8 @@ spring:
     url: jdbc:postgresql://${POSTGRES_HOST:postgres}:${POSTGRES_PORT:5432}/${POSTGRES_DB:miniserversystem}
     username: ${POSTGRES_USER:miniserversystem}
     password: ${POSTGRES_PASSWORD:miniserversystem}
+    hikari:
+      schema: notification
 
   flyway:
     enabled: true
