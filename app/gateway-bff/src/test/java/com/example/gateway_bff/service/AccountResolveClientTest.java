@@ -18,6 +18,7 @@ import java.net.SocketTimeoutException;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
@@ -31,7 +32,9 @@ class AccountResolveClientTest {
   @Test
   void resolveRejectsNullClaims() {
     final ClientFixture fixture = newFixture();
-    assertThatThrownBy(() -> fixture.client.resolveIdentity(null))
+    assertThatThrownBy(
+            () ->
+                ReflectionTestUtils.invokeMethod(fixture.client, "resolveIdentity", (Object) null))
         .isInstanceOf(NullPointerException.class)
         .hasMessageContaining("claims");
   }
