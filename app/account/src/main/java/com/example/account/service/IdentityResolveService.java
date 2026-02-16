@@ -14,6 +14,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -29,7 +30,7 @@ public class IdentityResolveService {
   private final Clock clock;
 
   @Transactional
-  public IdentityResolveResponse resolve(IdentityResolveRequest request) {
+  public IdentityResolveResponse resolve(@NonNull IdentityResolveRequest request) {
     validateRequest(request);
 
     final Optional<IdentityRecord> existing =
@@ -74,9 +75,6 @@ public class IdentityResolveService {
   }
 
   private void validateRequest(IdentityResolveRequest request) {
-    if (request == null) {
-      throw new IllegalArgumentException("request is required");
-    }
     if (isBlank(request.provider())) {
       throw new IllegalArgumentException("provider is required");
     }

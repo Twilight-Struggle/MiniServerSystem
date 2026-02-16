@@ -7,6 +7,7 @@ import com.example.gateway_bff.model.AuthenticatedUser;
 import com.example.gateway_bff.service.dto.AccountUserPatchRequest;
 import com.example.gateway_bff.service.dto.AccountUserResponse;
 import java.net.SocketTimeoutException;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.ResourceAccessException;
@@ -20,21 +21,20 @@ public class AccountUserClient {
   private final RestClient accountRestClient;
   private final AccountClientProperties properties;
 
-  public UserResponse getUser(String targetUserId, AuthenticatedUser requester) {
+  public UserResponse getUser(@NonNull String targetUserId, @NonNull AuthenticatedUser requester) {
     validateTargetUserId(targetUserId);
-    validateRequester(requester);
+    validateRequesterUserId(requester);
     final AccountUserResponse response =
         callGetUser(targetUserId, requester.userId(), serializeRoles(requester));
     return toUserResponse(response);
   }
 
   public UserResponse patchUser(
-      String targetUserId, UserPatchRequest patchRequest, AuthenticatedUser requester) {
+      @NonNull String targetUserId,
+      @NonNull UserPatchRequest patchRequest,
+      @NonNull AuthenticatedUser requester) {
     validateTargetUserId(targetUserId);
-    validateRequester(requester);
-    if (patchRequest == null) {
-      throw new IllegalArgumentException("patchRequest is required");
-    }
+    validateRequesterUserId(requester);
     final AccountUserResponse response =
         callPatchUser(
             targetUserId,
@@ -45,13 +45,13 @@ public class AccountUserClient {
   }
 
   private void validateTargetUserId(String targetUserId) {
-    if (targetUserId == null || targetUserId.isBlank()) {
+    if (targetUserId.isBlank()) {
       throw new IllegalArgumentException("targetUserId is required");
     }
   }
 
-  private void validateRequester(AuthenticatedUser requester) {
-    if (requester == null || requester.userId() == null || requester.userId().isBlank()) {
+  private void validateRequesterUserId(AuthenticatedUser requester) {
+    if (requester.userId() == null || requester.userId().isBlank()) {
       throw new IllegalArgumentException("requester userId is required");
     }
   }

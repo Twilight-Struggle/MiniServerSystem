@@ -32,8 +32,8 @@ class AccountResolveClientTest {
   void resolveRejectsNullClaims() {
     final ClientFixture fixture = newFixture();
     assertThatThrownBy(() -> fixture.client.resolveIdentity(null))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("claims is required");
+        .isInstanceOf(NullPointerException.class)
+        .hasMessageContaining("claims");
   }
 
   @Test

@@ -6,6 +6,7 @@ import com.example.account.model.UserRecord;
 import com.example.account.repository.RoleRepository;
 import com.example.account.repository.UserRepository;
 import java.util.List;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -26,10 +27,7 @@ public class UserService {
     return toResponse(user, roles);
   }
 
-  public UserResponse patchUser(String userId, UserPatchRequest request) {
-    if (request == null) {
-      throw new IllegalArgumentException("request is required");
-    }
+  public UserResponse patchUser(String userId, @NonNull UserPatchRequest request) {
     final UserRecord updated =
         userRepository.updateProfile(userId, request.displayName(), request.locale());
     final List<String> roles = roleRepository.findRolesByUserId(userId);

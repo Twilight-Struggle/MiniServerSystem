@@ -6,6 +6,7 @@ import com.example.gateway_bff.model.OidcClaims;
 import com.example.gateway_bff.service.dto.AccountIdentityResolveRequest;
 import com.example.gateway_bff.service.dto.AccountIdentityResolveResponse;
 import java.net.SocketTimeoutException;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.ResourceAccessException;
@@ -19,10 +20,7 @@ public class AccountResolveClient {
   private final RestClient accountRestClient;
   private final AccountClientProperties properties;
 
-  public AuthenticatedUser resolveIdentity(OidcClaims claims) {
-    if (claims == null) {
-      throw new IllegalArgumentException("claims is required");
-    }
+  public AuthenticatedUser resolveIdentity(@NonNull OidcClaims claims) {
     if (isBlank(claims.provider())) {
       throw new IllegalArgumentException("provider is required");
     }
