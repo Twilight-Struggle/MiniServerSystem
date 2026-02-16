@@ -4,4 +4,30 @@
     <Match>
         <Source name="~.*\/generated\/.*"/>
     </Match>
+
+    <!-- Spring DI のコンストラクタ注入を EI_EXPOSE_REP2 から除外 -->
+    <Match>
+        <Class name="com.example.account.repository.AuditLogRepository"/>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+    </Match>
+    <Match>
+        <Class name="com.example.account.repository.IdentityRepository"/>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+    </Match>
+    <Match>
+        <Class name="com.example.account.repository.RoleRepository"/>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+    </Match>
+    <Match>
+        <Class name="com.example.account.repository.UserRepository"/>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+    </Match>
+    <Match>
+        <Class name="com.example.account.service.UserService"/>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+    </Match>
+    <Match>
+        <Class name="com.example.gateway_bff.api.AuthController"/>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+    </Match>
 </FindBugsFilter>

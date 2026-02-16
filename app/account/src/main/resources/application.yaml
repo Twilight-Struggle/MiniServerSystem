@@ -1,6 +1,17 @@
 server:
   port: 8080
 
+spring:
+  application:
+    name: account
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    create-schemas: true
+    default-schema: account
+    schemas: account
+    table: flyway_schema_history_account
+
 management:
   endpoints:
     web:
@@ -10,3 +21,10 @@ management:
     health:
       probes:
         enabled: true
+
+account:
+  internal-api:
+    header-name: ${ACCOUNT_INTERNAL_API_HEADER_NAME:X-Internal-Token}
+    token: ${ACCOUNT_INTERNAL_API_TOKEN:}
+    user-id-header-name: ${ACCOUNT_USER_ID_HEADER_NAME:X-User-Id}
+    user-roles-header-name: ${ACCOUNT_USER_ROLES_HEADER_NAME:X-User-Roles}

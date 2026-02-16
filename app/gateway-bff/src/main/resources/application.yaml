@@ -1,6 +1,27 @@
 server:
   port: 8080
 
+spring:
+  application:
+    name: gateway-bff
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak:
+            provider: keycloak
+            client-id: ${OIDC_CLIENT_ID:gateway-bff}
+            client-secret: ${OIDC_CLIENT_SECRET:}
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope: openid,profile,email
+        provider:
+          keycloak:
+            authorization-uri: ${OIDC_AUTHORIZATION_URI:http://keycloak.localhost/realms/miniserversystem/protocol/openid-connect/auth}
+            token-uri: ${OIDC_TOKEN_URI:http://keycloak:8080/realms/miniserversystem/protocol/openid-connect/token}
+            jwk-set-uri: ${OIDC_JWK_SET_URI:http://keycloak:8080/realms/miniserversystem/protocol/openid-connect/certs}
+            user-name-attribute: sub
+
 management:
   endpoints:
     web:
@@ -10,3 +31,13 @@ management:
     health:
       probes:
         enabled: true
+
+account:
+  base-url: ${ACCOUNT_BASE_URL:http://account:80}
+  internal-api-token: ${ACCOUNT_INTERNAL_API_TOKEN:}
+  internal-api-header-name: ${ACCOUNT_INTERNAL_API_HEADER_NAME:X-Internal-Token}
+  resolve-identity-path: ${ACCOUNT_RESOLVE_IDENTITY_PATH:/identities:resolve}
+  get-user-path: ${ACCOUNT_GET_USER_PATH:/users/{userId}}
+  patch-user-path: ${ACCOUNT_PATCH_USER_PATH:/users/{userId}}
+  user-id-header-name: ${ACCOUNT_USER_ID_HEADER_NAME:X-User-Id}
+  user-roles-header-name: ${ACCOUNT_USER_ROLES_HEADER_NAME:X-User-Roles}

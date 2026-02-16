@@ -8,5 +8,6 @@ spec:
     spec:
       volumes:
         - name: nats-data
+          emptyDir: null
           persistentVolumeClaim:
             claimName: nats-data

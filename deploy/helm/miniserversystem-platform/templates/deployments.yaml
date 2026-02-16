@@ -5,6 +5,10 @@ kind: Deployment
 metadata:
   name: {{ $name }}
 spec:
+  {{- if $svc.strategy }}
+  strategy:
+    type: {{ $svc.strategy }}
+  {{- end }}
   replicas: 1
   selector:
     matchLabels:

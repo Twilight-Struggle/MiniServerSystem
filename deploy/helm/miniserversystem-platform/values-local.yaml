@@ -13,6 +13,13 @@ app:
       ENTITLEMENT_BASE_URL: http://entitlement:80
       MATCHMAKING_BASE_URL: http://matchmaking:80
       NOTIFICATION_BASE_URL: http://notification:80
+      OIDC_AUTHORIZATION_URI: http://keycloak.localhost/realms/miniserversystem/protocol/openid-connect/auth
+      OIDC_TOKEN_URI: http://keycloak:8080/realms/miniserversystem/protocol/openid-connect/token
+      OIDC_USER_INFO_URI: http://keycloak:8080/realms/miniserversystem/protocol/openid-connect/userinfo
+      OIDC_JWK_SET_URI: http://keycloak:8080/realms/miniserversystem/protocol/openid-connect/certs
+      OIDC_CLIENT_ID: gateway-bff
+      OIDC_CLIENT_SECRET: fovHK8ZOOKXRpyMYYeShF0QQpIQbiIZe
+      ACCOUNT_INTERNAL_API_TOKEN: changeit-internal
 
   account:
     enabled: true
@@ -26,6 +33,7 @@ app:
       POSTGRES_DB: miniserversystem
       POSTGRES_USER: miniserversystem
       POSTGRES_PASSWORD: miniserversystem
+      ACCOUNT_INTERNAL_API_TOKEN: changeit-internal
 
   entitlement:
     enabled: true
@@ -54,6 +62,7 @@ app:
 
   notification:
     enabled: true
+    strategy: Recreate
     image: { repository: notification, tag: dev }
     port: 8080
     servicePort: 80
