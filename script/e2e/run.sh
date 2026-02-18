@@ -63,8 +63,9 @@ require_cmd kubectl
 require_cmd curl
 
 BASE_URL="http://127.0.0.1:${LOCAL_PORT}"
-KEYCLOAK_BASE_URL="http://127.0.0.1:${KEYCLOAK_LOCAL_PORT}"
-KEYCLOAK_WELL_KNOWN_URL="${KEYCLOAK_BASE_URL}/realms/${REALM}/.well-known/openid-configuration"
+KEYCLOAK_LOCAL_BASE_URL="http://127.0.0.1:${KEYCLOAK_LOCAL_PORT}"
+KEYCLOAK_BASE_URL="http://keycloak.localhost:${KEYCLOAK_LOCAL_PORT}"
+KEYCLOAK_WELL_KNOWN_URL="${KEYCLOAK_LOCAL_BASE_URL}/realms/${REALM}/.well-known/openid-configuration"
 
 dump_diagnostics() {
   echo "=== Diagnostics (namespace=${NAMESPACE}) ===" >&2

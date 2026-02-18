@@ -42,6 +42,7 @@ if [[ -z "${BASE_URL}" || -z "${KEYCLOAK_BASE_URL}" ]]; then
 fi
 
 require_cmd curl
+require_cmd perl
 
 COOKIE_JAR="$(mktemp)"
 RESPONSE_BODY_FILE="$(mktemp)"
