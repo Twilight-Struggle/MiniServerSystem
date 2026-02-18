@@ -31,11 +31,11 @@ Jib のキャッシュ（build/jib-cache）を CI で actions/cache する
 
 
 SLO
-format, lint, AGENT.mdにファイル構造
-Phase2
 e2e
 デプロイ
 メトリクス + RUNBOOK
+Istio(mTLS, timeout, retry, CB, fallback)
+Profile Aggregate(gateway-bff)←account + entitlement + matchmaking
 
 ### Static Analysis
 SpotBugs の EI_EXPOSE_REP/EI_EXPOSE_REP2 は防御的コピーまたはコピー可能な依存の再ラップで対応する

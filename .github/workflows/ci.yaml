@@ -140,7 +140,22 @@ jobs:
 
           kubectl -n miniserversystem rollout status deploy/redis --timeout=180s
           kubectl -n miniserversystem rollout status deploy/nats  --timeout=180s
+          kubectl -n miniserversystem rollout status deploy/keycloak --timeout=240s
           kubectl -n miniserversystem rollout status statefulset/postgres --timeout=180s
+
+      - name: Verify Keycloak bootstrap (realm/client/user)
+        run: |
+          set -eux
+          chmod +x script/e2e/check-keycloak.sh
+          ./script/e2e/check-keycloak.sh \
+            --namespace miniserversystem \
+            --service keycloak \
+            --local-port 18081 \
+            --realm miniserversystem \
+            --client-id gateway-bff \
+            --client-secret changeit \
+            --username test \
+            --password test
 
       - name: Deploy apps (Helm values-ci.yaml)
         run: |
