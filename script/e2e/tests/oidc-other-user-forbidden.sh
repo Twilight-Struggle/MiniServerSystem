@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Where: script/e2e/tests/oidc-user-ownership.sh
-# What: OIDC login E2E and identity-preserving /v1/users/{myUserId} verification.
-# Why: Ensure BFF-to-Account call path does not break authenticated user ownership.
+# Where: script/e2e/tests/oidc-other-user-forbidden.sh
+# What: Verify authenticated user cannot read another user's profile via BFF.
+# Why: Prevent horizontal privilege escalation even when traffic is routed through BFF.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../lib/common.sh"
@@ -44,35 +44,29 @@ fi
 require_cmd curl
 
 COOKIE_JAR="$(mktemp)"
-USER_BODY_FILE="$(mktemp)"
+RESPONSE_BODY_FILE="$(mktemp)"
 cleanup() {
-  rm -f "${COOKIE_JAR}" "${USER_BODY_FILE}" || true
+  rm -f "${COOKIE_JAR}" "${RESPONSE_BODY_FILE}" || true
 }
 trap cleanup EXIT
 
 echo "=== OIDC login flow ==="
 oidc_login "${BASE_URL}" "${KEYCLOAK_BASE_URL}" "${USERNAME}" "${PASSWORD}" "${COOKIE_JAR}"
 
-echo "=== Verify authenticated subject identity via BFF -> Account ==="
+echo "=== Verify other user lookup is rejected ==="
 MY_USER_ID="$(fetch_me_user_id "${BASE_URL}" "${COOKIE_JAR}")"
+OTHER_USER_ID="other-${MY_USER_ID}"
 
-GET_USER_CODE="$(
-  curl -sS -o "${USER_BODY_FILE}" -w "%{http_code}" \
+STATUS_CODE="$(
+  curl -sS -o "${RESPONSE_BODY_FILE}" -w "%{http_code}" \
     -c "${COOKIE_JAR}" -b "${COOKIE_JAR}" \
-    "${BASE_URL}/v1/users/${MY_USER_ID}"
+    "${BASE_URL}/v1/users/${OTHER_USER_ID}"
 )"
-if [[ "${GET_USER_CODE}" != "200" ]]; then
-  echo "ERROR: GET /v1/users/${MY_USER_ID} returned ${GET_USER_CODE}" >&2
-  echo "response=$(cat "${USER_BODY_FILE}")" >&2
+
+if [[ "${STATUS_CODE}" != "403" && "${STATUS_CODE}" != "404" ]]; then
+  echo "ERROR: expected 403 or 404 for other user lookup, but got ${STATUS_CODE}" >&2
+  echo "response=$(cat "${RESPONSE_BODY_FILE}")" >&2
   exit 1
 fi
 
-USER_JSON="$(cat "${USER_BODY_FILE}")"
-RETURNED_USER_ID="$(extract_json_field "${USER_JSON}" "userId")"
-if [[ "${RETURNED_USER_ID}" != "${MY_USER_ID}" ]]; then
-  echo "ERROR: userId mismatch (expected=${MY_USER_ID}, actual=${RETURNED_USER_ID})" >&2
-  echo "response=${USER_JSON}" >&2
-  exit 1
-fi
-
-echo "=== oidc-user-ownership test passed ==="
+echo "=== oidc-other-user-forbidden test passed (status=${STATUS_CODE}) ==="

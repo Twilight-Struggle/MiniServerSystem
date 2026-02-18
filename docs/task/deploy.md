@@ -122,3 +122,4 @@ make dev
   - Gateway/Keycloak の readiness
   - OIDC ログイン後に `GET /v1/me` で `myUserId` を取得できること
   - `GET /v1/users/{myUserId}` が `200` を返し、レスポンス `userId` が `myUserId` と一致すること
+  - `GET /v1/users/{otherUserId}` が `403`で拒否されること

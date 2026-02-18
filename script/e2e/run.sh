@@ -131,4 +131,12 @@ run_test_script \
   --username "${USERNAME}" \
   --password "${PASSWORD}"
 
+run_test_script \
+  "oidc-other-user-forbidden" \
+  "${SCRIPT_DIR}/tests/oidc-other-user-forbidden.sh" \
+  --base-url "${BASE_URL}" \
+  --keycloak-base-url "${KEYCLOAK_BASE_URL}" \
+  --username "${USERNAME}" \
+  --password "${PASSWORD}"
+
 echo "=== All E2E tests passed ==="
