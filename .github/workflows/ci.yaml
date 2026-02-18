@@ -176,7 +176,7 @@ jobs:
           kubectl logs -n miniserversystem deploy/entitlement --tail=200 || true
           kubectl logs -n miniserversystem deploy/notification --tail=200 || true
 
-      - name: E2E (health checks + diagnostics)
+      - name: E2E (health + OIDC + BFF->Account ownership)
         run: |
           set -eux
           chmod +x script/e2e/run.sh

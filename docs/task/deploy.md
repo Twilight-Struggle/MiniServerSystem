@@ -117,3 +117,8 @@ make dev
   - Client: `gateway-bff` (secret: `changeit`)
   - User: `test` (password: `test`)
 - `.github/workflows/ci.yaml` の E2E job で `script/e2e/check-keycloak.sh` を実行し、well-known endpoint と token 発行で初期化完了を検証する
+- `script/e2e/run.sh` では以下を通しで検証する
+  - `script/e2e/tests/*.sh` を順次実行するオーケストレーターとして動作
+  - Gateway/Keycloak の readiness
+  - OIDC ログイン後に `GET /v1/me` で `myUserId` を取得できること
+  - `GET /v1/users/{myUserId}` が `200` を返し、レスポンス `userId` が `myUserId` と一致すること
