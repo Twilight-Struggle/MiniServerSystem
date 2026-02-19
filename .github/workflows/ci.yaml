@@ -108,6 +108,15 @@ jobs:
           cluster_name: mss
           wait: 120s
 
+      - name: Guard kubectl context (kind-mss)
+        run: |
+          set -eux
+          kubectl config use-context kind-mss
+          test "$(kubectl config current-context)" = "kind-mss"
+          kubectl --context kind-mss cluster-info
+          kubectl --context kind-mss get nodes
+          kubectl --context kind-mss wait --for=condition=Ready nodes --all --timeout=120s
+
       - name: Setup Helm
         uses: azure/setup-helm@v4
         with:
