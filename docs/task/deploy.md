@@ -120,6 +120,7 @@ make dev
 - `script/e2e/run.sh` では以下を通しで検証する
   - `script/e2e/tests/*.sh` を順次実行するオーケストレーターとして動作
   - Gateway/Keycloak の readiness
+  - Entitlement 付与 API 実行後に、E2E スクリプトから Postgres に直接クエリし `notification.processed_events` 反映と `notification.notifications` 1件作成を確認する（Outbox -> NATS -> Notification 到達確認）
   - OIDC ログイン後に `GET /v1/me` で `myUserId` を取得できること
   - `GET /v1/users/{myUserId}` が `200` を返し、レスポンス `userId` が `myUserId` と一致すること
   - `GET /v1/users/{otherUserId}` が `403`で拒否されること

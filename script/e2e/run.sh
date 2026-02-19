@@ -15,6 +15,9 @@ REMOTE_PORT="80"
 KEYCLOAK_SERVICE="keycloak"
 KEYCLOAK_LOCAL_PORT="18081"
 KEYCLOAK_REMOTE_PORT="8080"
+ENTITLEMENT_SERVICE="entitlement"
+ENTITLEMENT_LOCAL_PORT="18082"
+ENTITLEMENT_REMOTE_PORT="80"
 REALM="miniserversystem"
 USERNAME="test"
 PASSWORD="test"
@@ -34,6 +37,12 @@ Options:
                           Local Keycloak port-forward port (default: ${KEYCLOAK_LOCAL_PORT})
   --keycloak-remote-port <p>
                           Keycloak Service port (default: ${KEYCLOAK_REMOTE_PORT})
+  --entitlement-service <s>
+                          Entitlement Service name (default: ${ENTITLEMENT_SERVICE})
+  --entitlement-local-port <p>
+                          Local Entitlement port-forward port (default: ${ENTITLEMENT_LOCAL_PORT})
+  --entitlement-remote-port <p>
+                          Entitlement Service port (default: ${ENTITLEMENT_REMOTE_PORT})
   --realm <name>          Keycloak realm name (default: ${REALM})
   --username <name>       Keycloak test user (default: ${USERNAME})
   --password <pw>         Keycloak test password (default: ${PASSWORD})
@@ -50,6 +59,9 @@ while [[ $# -gt 0 ]]; do
     --keycloak-service) KEYCLOAK_SERVICE="$2"; shift 2 ;;
     --keycloak-local-port) KEYCLOAK_LOCAL_PORT="$2"; shift 2 ;;
     --keycloak-remote-port) KEYCLOAK_REMOTE_PORT="$2"; shift 2 ;;
+    --entitlement-service) ENTITLEMENT_SERVICE="$2"; shift 2 ;;
+    --entitlement-local-port) ENTITLEMENT_LOCAL_PORT="$2"; shift 2 ;;
+    --entitlement-remote-port) ENTITLEMENT_REMOTE_PORT="$2"; shift 2 ;;
     --realm) REALM="$2"; shift 2 ;;
     --username) USERNAME="$2"; shift 2 ;;
     --password) PASSWORD="$2"; shift 2 ;;
@@ -66,6 +78,7 @@ BASE_URL="http://127.0.0.1:${LOCAL_PORT}"
 KEYCLOAK_LOCAL_BASE_URL="http://127.0.0.1:${KEYCLOAK_LOCAL_PORT}"
 KEYCLOAK_BASE_URL="http://keycloak.localhost:${KEYCLOAK_LOCAL_PORT}"
 KEYCLOAK_WELL_KNOWN_URL="${KEYCLOAK_LOCAL_BASE_URL}/realms/${REALM}/.well-known/openid-configuration"
+ENTITLEMENT_BASE_URL="http://127.0.0.1:${ENTITLEMENT_LOCAL_PORT}"
 
 dump_diagnostics() {
   echo "=== Diagnostics (namespace=${NAMESPACE}) ===" >&2
@@ -91,6 +104,9 @@ cleanup_pf() {
   if [[ -n "${KEYCLOAK_PF_PID:-}" ]]; then
     kill "${KEYCLOAK_PF_PID}" >/dev/null 2>&1 || true
   fi
+  if [[ -n "${ENTITLEMENT_PF_PID:-}" ]]; then
+    kill "${ENTITLEMENT_PF_PID}" >/dev/null 2>&1 || true
+  fi
 }
 trap cleanup_pf EXIT
 
@@ -104,6 +120,8 @@ run_test_script() {
     tail -n 200 /tmp/pf.log >&2 || true
     echo "--- keycloak port-forward log ---" >&2
     tail -n 200 /tmp/pf-keycloak.log >&2 || true
+    echo "--- entitlement port-forward log ---" >&2
+    tail -n 200 /tmp/pf-entitlement.log >&2 || true
     dump_diagnostics
     exit 1
   fi
@@ -117,11 +135,22 @@ echo "=== Port-forward svc/${KEYCLOAK_SERVICE} ${KEYCLOAK_LOCAL_PORT}:${KEYCLOAK
 kubectl -n "${NAMESPACE}" port-forward "svc/${KEYCLOAK_SERVICE}" "${KEYCLOAK_LOCAL_PORT}:${KEYCLOAK_REMOTE_PORT}" >/tmp/pf-keycloak.log 2>&1 &
 KEYCLOAK_PF_PID=$!
 
+echo "=== Port-forward svc/${ENTITLEMENT_SERVICE} ${ENTITLEMENT_LOCAL_PORT}:${ENTITLEMENT_REMOTE_PORT} (ns=${NAMESPACE}) ==="
+kubectl -n "${NAMESPACE}" port-forward "svc/${ENTITLEMENT_SERVICE}" "${ENTITLEMENT_LOCAL_PORT}:${ENTITLEMENT_REMOTE_PORT}" >/tmp/pf-entitlement.log 2>&1 &
+ENTITLEMENT_PF_PID=$!
+
 run_test_script \
   "health" \
   "${SCRIPT_DIR}/tests/health.sh" \
   --base-url "${BASE_URL}" \
   --keycloak-well-known-url "${KEYCLOAK_WELL_KNOWN_URL}" \
+  --timeout-sec "${TIMEOUT_SEC}"
+
+run_test_script \
+  "entitlement-notification-pipeline" \
+  "${SCRIPT_DIR}/tests/entitlement-notification-pipeline.sh" \
+  --entitlement-base-url "${ENTITLEMENT_BASE_URL}" \
+  --namespace "${NAMESPACE}" \
   --timeout-sec "${TIMEOUT_SEC}"
 
 run_test_script \
