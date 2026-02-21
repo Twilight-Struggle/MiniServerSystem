@@ -1,5 +1,7 @@
 resources:
   - ../../base
+  - keycloak-realm-configmap.yaml
 patches:
   - path: postgres-ephemeral.yaml
   - path: nats-ephemeral.yaml
+  - path: keycloak-bootstrap-patch.yaml

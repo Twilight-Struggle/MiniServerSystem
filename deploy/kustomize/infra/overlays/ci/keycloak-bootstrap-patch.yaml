@@ -1,0 +1,28 @@
+# Where: deploy/kustomize/infra/overlays/ci/keycloak-bootstrap-patch.yaml
+# What: Patch CI Keycloak deployment to import realm on startup.
+# Why: Enable automatic realm/client/user bootstrap for E2E in CI.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  namespace: miniserversystem
+spec:
+  template:
+    spec:
+      containers:
+        - name: keycloak
+          args:
+            - start-dev
+            - --http-port=8080
+            - --import-realm
+          volumeMounts:
+            - name: keycloak-realm-import
+              mountPath: /opt/keycloak/data/import
+              readOnly: true
+      volumes:
+        - name: keycloak-realm-import
+          configMap:
+            name: keycloak-realm-bootstrap
+            items:
+              - key: miniserversystem-realm.json
+                path: miniserversystem-realm.json
