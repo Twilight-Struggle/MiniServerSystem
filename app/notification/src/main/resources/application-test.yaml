@@ -11,3 +11,6 @@ notification:
     enabled: false
   delivery:
     enabled: false
+    failure-injection:
+      enabled: false
+      user-id-prefix: ""

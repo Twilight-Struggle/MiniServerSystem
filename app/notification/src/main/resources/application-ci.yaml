@@ -20,6 +20,9 @@ nats:
 notification:
   delivery:
     enabled: true
+    failure-injection:
+      enabled: false
+      user-id-prefix: ""
 
   retention:
     enabled: true

@@ -154,6 +154,13 @@ run_test_script \
   --timeout-sec "${TIMEOUT_SEC}"
 
 run_test_script \
+  "notification-delivery-dlq" \
+  "${SCRIPT_DIR}/tests/notification-delivery-dlq.sh" \
+  --entitlement-base-url "${ENTITLEMENT_BASE_URL}" \
+  --namespace "${NAMESPACE}" \
+  --timeout-sec "${TIMEOUT_SEC}"
+
+run_test_script \
   "oidc-user-ownership" \
   "${SCRIPT_DIR}/tests/oidc-user-ownership.sh" \
   --base-url "${BASE_URL}" \
