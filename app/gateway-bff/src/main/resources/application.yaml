@@ -1,5 +1,7 @@
 server:
   port: 8080
+  tomcat:
+    use-relative-redirects: true
 
 spring:
   application:
@@ -13,7 +15,7 @@ spring:
             client-id: ${OIDC_CLIENT_ID:gateway-bff}
             client-secret: ${OIDC_CLIENT_SECRET:}
             authorization-grant-type: authorization_code
-            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            redirect-uri: ${OIDC_REDIRECT_URI:http://localhost:18080/login/oauth2/code/keycloak}
             scope: openid,profile,email
         provider:
           keycloak:

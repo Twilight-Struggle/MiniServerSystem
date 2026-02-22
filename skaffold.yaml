@@ -65,7 +65,7 @@ deploy:
 
 portForward:
   - resourceType: service
-    resourceName: gateway
-    namespace: miniserversystem
+    resourceName: istio-ingressgateway
+    namespace: istio-system
     port: 80
     localPort: 18080

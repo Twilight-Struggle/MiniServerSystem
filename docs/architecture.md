@@ -214,7 +214,7 @@ account 側:
 
 - `/v1/users/{userId}/profile` は現時点で実データ集約未実装（プレースホルダー）
 - gateway-bff → account のリトライ/サーキットブレーカーは未導入
-- 内部 API 認証は共有トークン方式であり、mTLS/JWT への強化余地あり
+- 内部 API は Istio mTLS(STRICT) + AuthorizationPolicy でゼロトラスト化し、共有トークン方式はアプリレイヤーの追加ガードとして併用する
 
 ## 12. 主要設計判断
 

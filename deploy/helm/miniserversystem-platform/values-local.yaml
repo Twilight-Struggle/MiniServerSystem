@@ -4,6 +4,7 @@ global:
 app:
   gateway:
     enabled: true
+    serviceAccountName: gateway
     image: { repository: gateway-bff, tag: dev }
     port: 8080
     servicePort: 80
@@ -19,10 +20,12 @@ app:
       OIDC_JWK_SET_URI: http://keycloak:8080/realms/miniserversystem/protocol/openid-connect/certs
       OIDC_CLIENT_ID: gateway-bff
       OIDC_CLIENT_SECRET: fovHK8ZOOKXRpyMYYeShF0QQpIQbiIZe
+      OIDC_REDIRECT_URI: http://localhost:18080/login/oauth2/code/keycloak
       ACCOUNT_INTERNAL_API_TOKEN: changeit-internal
 
   account:
     enabled: true
+    serviceAccountName: account
     image: { repository: account, tag: dev }
     port: 8080
     servicePort: 80
@@ -37,6 +40,7 @@ app:
 
   entitlement:
     enabled: true
+    serviceAccountName: entitlement
     image: { repository: entitlement, tag: dev }
     port: 8080
     servicePort: 80
@@ -51,6 +55,7 @@ app:
 
   matchmaking:
     enabled: true
+    serviceAccountName: matchmaking
     image: { repository: matchmaking, tag: dev }
     port: 8080
     servicePort: 80
@@ -62,6 +67,7 @@ app:
 
   notification:
     enabled: true
+    serviceAccountName: notification
     strategy: Recreate
     image: { repository: notification, tag: dev }
     port: 8080
@@ -76,6 +82,25 @@ app:
       NATS_URL: nats://nats:4222
 
 ingress:
-  enabled: true
+  enabled: false
   host: localhost
   path: /
+
+istio:
+  enabled: true
+  ingress:
+    enabled: true
+    hosts:
+      - "*"
+    path: /
+  security:
+    enabled: true
+    # Istio installation differences are absorbed by listing both common principal names.
+    ingressGatewayPrincipals:
+      - cluster.local/ns/istio-system/sa/istio-ingressgateway
+      - cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account
+    notificationDenyAll: true
+  externalEntitlementApi:
+    paths:
+      - /v1/entitlements/grants
+      - /v1/entitlements/revokes

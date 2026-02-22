@@ -1,0 +1,58 @@
+{{- /*
+Where: deploy/helm/miniserversystem-platform/templates/istio-gateway-virtualservice.yaml
+What: Istio Gateway/VirtualService to expose only gateway-bff.
+Why: Replace Kubernetes Ingress and make ingress path controllable via Istio.
+*/ -}}
+{{- if and .Values.istio.enabled .Values.istio.ingress.enabled }}
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: miniserversystem-gateway
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - hosts:
+        {{- range .Values.istio.ingress.hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      port:
+        number: 80
+        name: http
+        protocol: HTTP
+---
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: miniserversystem-gateway
+spec:
+  gateways:
+    - miniserversystem-gateway
+  hosts:
+    {{- range .Values.istio.ingress.hosts }}
+    - {{ . | quote }}
+    {{- end }}
+  http:
+    - name: entitlement-external-payment
+      match:
+        {{- range .Values.istio.externalEntitlementApi.paths }}
+        - uri:
+            exact: {{ . | quote }}
+          method:
+            exact: POST
+        {{- end }}
+      route:
+        - destination:
+            host: entitlement.{{ .Release.Namespace }}.svc.cluster.local
+            port:
+              number: 80
+    - name: gateway-bff
+      match:
+        - uri:
+            prefix: {{ .Values.istio.ingress.path | quote }}
+      route:
+        - destination:
+            host: gateway.{{ .Release.Namespace }}.svc.cluster.local
+            port:
+              number: 80
+{{- end }}

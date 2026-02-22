@@ -1,0 +1,114 @@
+{{- /*
+Where: deploy/helm/miniserversystem-platform/templates/istio-security.yaml
+What: Istio mTLS and workload-level authorization controls.
+Why: Enforce zero-trust service-to-service communication in miniserversystem namespace.
+*/ -}}
+{{- if and .Values.istio.enabled .Values.istio.security.enabled }}
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: miniserversystem-strict
+spec:
+  mtls:
+    mode: STRICT
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: gateway-allow-ingressgateway
+spec:
+  selector:
+    matchLabels:
+      app: gateway
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              {{- range .Values.istio.security.ingressGatewayPrincipals }}
+              - {{ . | quote }}
+              {{- end }}
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: account-allow-gateway
+spec:
+  selector:
+    matchLabels:
+      app: account
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - "cluster.local/ns/{{ .Release.Namespace }}/sa/{{ default "gateway" .Values.app.gateway.serviceAccountName }}"
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: entitlement-allow-gateway
+spec:
+  selector:
+    matchLabels:
+      app: entitlement
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - "cluster.local/ns/{{ .Release.Namespace }}/sa/{{ default "gateway" .Values.app.gateway.serviceAccountName }}"
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: entitlement-allow-external-payment
+spec:
+  selector:
+    matchLabels:
+      app: entitlement
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              {{- range .Values.istio.security.ingressGatewayPrincipals }}
+              - {{ . | quote }}
+              {{- end }}
+      to:
+        - operation:
+            methods:
+              - POST
+            paths:
+              {{- range .Values.istio.externalEntitlementApi.paths }}
+              - {{ . | quote }}
+              {{- end }}
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: matchmaking-allow-gateway
+spec:
+  selector:
+    matchLabels:
+      app: matchmaking
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - "cluster.local/ns/{{ .Release.Namespace }}/sa/{{ default "gateway" .Values.app.gateway.serviceAccountName }}"
+{{- if .Values.istio.security.notificationDenyAll }}
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: notification-deny-all-ingress
+spec:
+  selector:
+    matchLabels:
+      app: notification
+  action: ALLOW
+  rules: []
+{{- end }}
+{{- end }}

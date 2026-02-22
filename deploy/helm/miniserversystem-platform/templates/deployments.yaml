@@ -17,7 +17,12 @@ spec:
     metadata:
       labels:
         app: {{ $name }}
+      {{- if $.Values.istio.enabled }}
+      annotations:
+        sidecar.istio.io/inject: "true"
+      {{- end }}
     spec:
+      serviceAccountName: {{ default $name $svc.serviceAccountName }}
       containers:
         - name: {{ $name }}
           image: "{{ $svc.image.repository }}:{{ $svc.image.tag }}"

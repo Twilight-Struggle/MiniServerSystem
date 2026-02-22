@@ -9,7 +9,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib/common.sh"
 
 NAMESPACE="miniserversystem"
-GATEWAY_SERVICE="gateway"
+GATEWAY_NAMESPACE="istio-system"
+GATEWAY_SERVICE="istio-ingressgateway"
 LOCAL_PORT="18080"
 REMOTE_PORT="80"
 KEYCLOAK_SERVICE="keycloak"
@@ -29,6 +30,8 @@ Usage: $0 [options]
 
 Options:
   --namespace <ns>        Kubernetes namespace (default: ${NAMESPACE})
+  --gateway-namespace <ns>
+                          Kubernetes namespace for ingress gateway (default: ${GATEWAY_NAMESPACE})
   --gateway-service <svc> Gateway Service name (default: ${GATEWAY_SERVICE})
   --local-port <port>     Local port for port-forward (default: ${LOCAL_PORT})
   --remote-port <port>    Service port for port-forward (default: ${REMOTE_PORT})
@@ -53,6 +56,7 @@ EOF
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --namespace)       NAMESPACE="$2"; shift 2 ;;
+    --gateway-namespace) GATEWAY_NAMESPACE="$2"; shift 2 ;;
     --gateway-service) GATEWAY_SERVICE="$2"; shift 2 ;;
     --local-port)      LOCAL_PORT="$2"; shift 2 ;;
     --remote-port)     REMOTE_PORT="$2"; shift 2 ;;
@@ -150,8 +154,8 @@ run_test_script() {
   fi
 }
 
-echo "=== Port-forward svc/${GATEWAY_SERVICE} ${LOCAL_PORT}:${REMOTE_PORT} (ns=${NAMESPACE}) ==="
-kubectl -n "${NAMESPACE}" port-forward "svc/${GATEWAY_SERVICE}" "${LOCAL_PORT}:${REMOTE_PORT}" >/tmp/pf.log 2>&1 &
+echo "=== Port-forward svc/${GATEWAY_SERVICE} ${LOCAL_PORT}:${REMOTE_PORT} (ns=${GATEWAY_NAMESPACE}) ==="
+kubectl -n "${GATEWAY_NAMESPACE}" port-forward "svc/${GATEWAY_SERVICE}" "${LOCAL_PORT}:${REMOTE_PORT}" >/tmp/pf.log 2>&1 &
 GATEWAY_PF_PID=$!
 
 echo "=== Port-forward svc/${KEYCLOAK_SERVICE} ${KEYCLOAK_LOCAL_PORT}:${KEYCLOAK_REMOTE_PORT} (ns=${NAMESPACE}) ==="

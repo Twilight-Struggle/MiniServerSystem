@@ -39,6 +39,18 @@ Rancher Desktopのk3sを利用(containerd)
 3. アプリは Skaffold で自動 rebuild/deploy
 4. Gateway 1つのエンドポイントで動作確認
 
+## Istio 導入時の前提
+- sidecar はアプリ Pod のみに注入し、infra Pod（PostgreSQL/NATS/Redis/Keycloak）には注入しない
+- 外部公開は Kubernetes Ingress ではなく Istio IngressGateway を利用する
+- ローカル確認時の `localhost:18080` は `istio-system/istio-ingressgateway:80` への port-forward を利用する
+- namespace 内通信は `PeerAuthentication STRICT` を適用する
+- `AuthorizationPolicy` で以下を強制する
+  - `gateway` は Istio IngressGateway からのみ許可
+  - `account`/`entitlement`/`matchmaking` は `gateway` からのみ許可
+  - ただし `entitlement` の `POST /v1/entitlements/grants` と `POST /v1/entitlements/revokes` は外部決済サービス想定のため IngressGateway から直接許可
+  - `notification` は外部公開しない（inbound deny）
+- PostgreSQL/NATS/Redis は非メッシュ依存なので `NetworkPolicy` で到達元を制限する
+
 ### ローカルのイメージレジストリ
 k3s(Rancher Desktopの軽量k8s)
 

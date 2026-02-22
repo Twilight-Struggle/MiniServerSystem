@@ -5,3 +5,4 @@ resources:
   - nats.yaml
   - keycloak.yaml
   - keycloak-ingress.yaml
+  - network-policies.yaml
