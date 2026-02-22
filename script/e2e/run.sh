@@ -90,8 +90,31 @@ dump_diagnostics() {
   echo "--- describe pods ---" >&2
   kubectl -n "${NAMESPACE}" describe pods || true
 
+  echo "--- postgres state ---" >&2
+  local postgres_pod=""
+  postgres_pod="$(kubectl -n "${NAMESPACE}" get pod -l app=postgres -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)"
+  if [[ -n "${postgres_pod}" ]]; then
+    kubectl -n "${NAMESPACE}" exec "${postgres_pod}" -- pg_isready -U miniserversystem -d miniserversystem || true
+    kubectl -n "${NAMESPACE}" exec "${postgres_pod}" -- \
+      psql -U miniserversystem -d miniserversystem -c \
+      "SELECT NOW() AS now_utc;" || true
+  else
+    echo "postgres pod not found" >&2
+  fi
+
+  echo "--- nats state ---" >&2
+  local nats_pod=""
+  nats_pod="$(kubectl -n "${NAMESPACE}" get pod -l app=nats -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)"
+  if [[ -n "${nats_pod}" ]]; then
+    kubectl -n "${NAMESPACE}" get --raw "/api/v1/namespaces/${NAMESPACE}/pods/${nats_pod}:8222/proxy/healthz" || true
+    kubectl -n "${NAMESPACE}" get --raw "/api/v1/namespaces/${NAMESPACE}/pods/${nats_pod}:8222/proxy/varz" || true
+    kubectl -n "${NAMESPACE}" get --raw "/api/v1/namespaces/${NAMESPACE}/pods/${nats_pod}:8222/proxy/jsz?accounts=true&streams=true&consumers=true" || true
+  else
+    echo "nats pod not found" >&2
+  fi
+
   # 主要 deploy のログ（必要に応じて増やす）
-  for d in gateway account entitlement matchmaking notification; do
+  for d in gateway account entitlement matchmaking notification nats; do
     echo "--- logs: deploy/${d} (tail=200) ---" >&2
     kubectl -n "${NAMESPACE}" logs "deploy/${d}" --all-containers=true --tail=200 || true
   done
