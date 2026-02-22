@@ -1,0 +1,16 @@
+{{- /*
+Where: deploy/helm/miniserversystem-platform/templates/istio-destinationrules.yaml
+What: DestinationRules for non-mesh infra dependencies.
+Why: Force plaintext from meshed apps to non-sidecar services (e.g. NATS) to avoid auto-mTLS mismatch.
+*/ -}}
+{{- if .Values.istio.enabled }}
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: nats-plaintext
+spec:
+  host: nats.{{ .Release.Namespace }}.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: DISABLE
+{{- end }}

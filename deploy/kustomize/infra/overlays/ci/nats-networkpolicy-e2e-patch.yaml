@@ -1,0 +1,3 @@
+- op: add
+  path: /spec/ingress/0/from/0/podSelector/matchExpressions/0/values/-
+  value: e2e-nats-box

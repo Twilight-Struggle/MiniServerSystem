@@ -188,6 +188,24 @@ run_test_script \
   --timeout-sec "${TIMEOUT_SEC}"
 
 run_test_script \
+  "mesh-authz-non-gateway-denied" \
+  "${SCRIPT_DIR}/tests/mesh-authz-non-gateway-denied.sh" \
+  --namespace "${NAMESPACE}" \
+  --timeout-sec "${TIMEOUT_SEC}"
+
+run_test_script \
+  "external-entitlement-payment-api" \
+  "${SCRIPT_DIR}/tests/external-entitlement-payment-api.sh" \
+  --base-url "${BASE_URL}" \
+  --timeout-sec "${TIMEOUT_SEC}"
+
+run_test_script \
+  "external-entitlement-non-payment-denied" \
+  "${SCRIPT_DIR}/tests/external-entitlement-non-payment-denied.sh" \
+  --base-url "${BASE_URL}" \
+  --timeout-sec "${TIMEOUT_SEC}"
+
+run_test_script \
   "oidc-user-ownership" \
   "${SCRIPT_DIR}/tests/oidc-user-ownership.sh" \
   --base-url "${BASE_URL}" \

@@ -122,6 +122,21 @@ jobs:
         with:
           version: v4.0.4
 
+      - name: Install Istio (with ingress gateway)
+        run: |
+          set -eux
+          ISTIO_VERSION=1.29.0
+          curl -L https://istio.io/downloadIstio | ISTIO_VERSION="${ISTIO_VERSION}" TARGET_ARCH=x86_64 sh -
+          export PATH="$PWD/istio-${ISTIO_VERSION}/bin:$PATH"
+          istioctl version --remote=false
+          istioctl install -y \
+            --set profile=minimal \
+            --set values.defaultRevision=default \
+            --set components.ingressGateways[0].name=istio-ingressgateway \
+            --set components.ingressGateways[0].enabled=true
+          kubectl -n istio-system rollout status deploy/istiod --timeout=240s
+          kubectl -n istio-system rollout status deploy/istio-ingressgateway --timeout=240s
+
       - name: Build images (Jib -> local Docker)
         run: |
           set -eux
@@ -166,13 +181,47 @@ jobs:
             --username test \
             --password test
 
+      - name: Verify Istio prerequisites in miniserversystem namespace
+        run: |
+          set -euxo pipefail
+          kubectl get mutatingwebhookconfiguration istio-sidecar-injector -o name
+          kubectl get ns miniserversystem -o jsonpath='{.metadata.labels.istio-injection}'
+          kubectl -n istio-system get deploy istiod istio-ingressgateway -o wide
+
       - name: Deploy apps (Helm values-ci.yaml)
         run: |
-          set -eux
-          helm upgrade --install miniserversystem-platform deploy/helm/miniserversystem-platform \
+          set -euxo pipefail
+          if ! helm upgrade --install miniserversystem-platform deploy/helm/miniserversystem-platform \
             -n miniserversystem --create-namespace \
             -f deploy/helm/miniserversystem-platform/values-ci.yaml \
-            --wait --timeout 5m
+            --wait --timeout 5m --debug; then
+            echo "=== Helm deploy failed: dump diagnostics ==="
+            kubectl -n miniserversystem get pods -o wide || true
+            kubectl -n miniserversystem get deploy entitlement notification -o wide || true
+            kubectl -n miniserversystem describe deploy entitlement || true
+            kubectl -n miniserversystem describe deploy notification || true
+            kubectl -n miniserversystem describe pod -l app=entitlement || true
+            kubectl -n miniserversystem describe pod -l app=notification || true
+            kubectl -n miniserversystem logs deploy/entitlement -c entitlement --tail=300 || true
+            kubectl -n miniserversystem logs deploy/entitlement -c entitlement --previous --tail=300 || true
+            kubectl -n miniserversystem logs deploy/notification -c notification --tail=300 || true
+            kubectl -n miniserversystem logs deploy/notification -c notification --previous --tail=300 || true
+            kubectl -n miniserversystem logs deploy/entitlement -c istio-proxy --tail=200 || true
+            kubectl -n miniserversystem logs deploy/notification -c istio-proxy --tail=200 || true
+            kubectl -n miniserversystem logs deploy/entitlement --all-containers=true --tail=300 || true
+            kubectl -n miniserversystem logs deploy/notification --all-containers=true --tail=300 || true
+            kubectl -n miniserversystem get peerauthentication,authorizationpolicy -o yaml || true
+            kubectl -n miniserversystem get pods -l app=entitlement -o jsonpath='{.items[*].spec.containers[*].name}' || true
+            kubectl -n miniserversystem get pods -l app=notification -o jsonpath='{.items[*].spec.containers[*].name}' || true
+            kubectl -n miniserversystem get events --sort-by=.metadata.creationTimestamp || true
+            exit 1
+          fi
+
+      - name: Manifest smoke test (Istio + NetworkPolicy)
+        run: |
+          set -eux
+          chmod +x script/e2e/tests/istio-manifest-smoke.sh
+          ./script/e2e/tests/istio-manifest-smoke.sh
 
       - name: Dump diagnostics (on failure)
         if: failure()
@@ -191,5 +240,6 @@ jobs:
           chmod +x script/e2e/run.sh
           ./script/e2e/run.sh \
             --namespace miniserversystem \
-            --gateway-service gateway \
+            --gateway-namespace istio-system \
+            --gateway-service istio-ingressgateway \
             --local-port 18080

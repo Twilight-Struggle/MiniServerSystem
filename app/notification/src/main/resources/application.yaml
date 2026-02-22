@@ -20,7 +20,7 @@ spring:
 nats:
   enabled: true
   url: ${NATS_URL:nats://nats:4222}
-  connection-timeout: 2
+  connection-timeout: 5
 
 notification:
   delivery:

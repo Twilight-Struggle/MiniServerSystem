@@ -48,7 +48,7 @@ app:
       POSTGRES_DB: miniserversystem
       POSTGRES_USER: miniserversystem
       POSTGRES_PASSWORD: miniserversystem
-      NATS_URL: nats://nats:4222
+      NATS_URL: nats://nats.miniserversystem.svc.cluster.local:4222
 
   matchmaking:
     enabled: true
@@ -60,7 +60,7 @@ app:
       SPRING_PROFILES_ACTIVE: ci
       REDIS_HOST: redis
       REDIS_PORT: "6379"
-      NATS_URL: nats://nats:4222
+      NATS_URL: nats://nats.miniserversystem.svc.cluster.local:4222
 
   notification:
     enabled: true
@@ -76,7 +76,7 @@ app:
       POSTGRES_DB: miniserversystem
       POSTGRES_USER: miniserversystem
       POSTGRES_PASSWORD: miniserversystem
-      NATS_URL: nats://nats:4222
+      NATS_URL: nats://nats.miniserversystem.svc.cluster.local:4222
 
 ingress:
   enabled: false

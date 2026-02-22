@@ -15,6 +15,21 @@ spec:
 apiVersion: security.istio.io/v1
 kind: AuthorizationPolicy
 metadata:
+  name: allow-health-probes
+spec:
+  action: ALLOW
+  rules:
+    - to:
+        - operation:
+            methods:
+              - GET
+            paths:
+              - /actuator/health
+              - /actuator/health/*
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
   name: gateway-allow-ingressgateway
 spec:
   selector:

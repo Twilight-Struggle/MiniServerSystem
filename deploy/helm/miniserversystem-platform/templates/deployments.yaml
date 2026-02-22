@@ -20,6 +20,9 @@ spec:
       {{- if $.Values.istio.enabled }}
       annotations:
         sidecar.istio.io/inject: "true"
+        {{- if hasKey $svc.env "NATS_URL" }}
+        traffic.sidecar.istio.io/excludeOutboundPorts: "4222"
+        {{- end }}
       {{- end }}
     spec:
       serviceAccountName: {{ default $name $svc.serviceAccountName }}

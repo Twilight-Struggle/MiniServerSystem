@@ -5,3 +5,7 @@ patches:
   - path: postgres-ephemeral.yaml
   - path: nats-ephemeral.yaml
   - path: keycloak-bootstrap-patch.yaml
+  - path: nats-networkpolicy-e2e-patch.yaml
+    target:
+      kind: NetworkPolicy
+      name: nats-allow-apps-only
