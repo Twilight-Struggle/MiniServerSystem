@@ -13,25 +13,10 @@ NetworkPolicy は（可能なら）最低限の方針だけでも置く
 
 Observability: OpenTelemetry で trace を出す（Jaeger/Tempo をローカルに立てる）
 
-### OIDC（外部 IdP）をローカルでどう扱うか
-
-最短: Google OIDC をそのまま使い、localhost/Ingress にリダイレクトを通す（手軽）
-
-成果物として強い: Keycloak をローカルに立てて “外部 IdP っぽい” 依存として扱う（障害切り分けや運用の説明がしやすい）
-
-### CIとディレクトリ構造
-Jib のキャッシュ（build/jib-cache）を CI で actions/cache する
-
-各サービスの build.gradle.kts を共通化
-
 ### k8s
 #### NetworkPolicy で境界を可視化
 特定アプリ→DB のみ許可
 
-
-
-SLO
-e2e
 デプロイ
 メトリクス + RUNBOOK
 Istio(mTLS, timeout, retry, CB, fallback)
