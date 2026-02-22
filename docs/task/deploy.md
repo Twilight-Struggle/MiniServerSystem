@@ -86,15 +86,12 @@ kubectl -n miniserversystem get ingress keycloak
 `keycloak.localhost` が名前解決できない環境では、`/etc/hosts` に `127.0.0.1 keycloak.localhost` を追加する。
 
 ### 3. Realm / Client / User 初期設定
-1. Realm を `miniserversystem` で作成する
-2. Client を `gateway-bff` で作成する
-3. Client 設定:
-   - Client authentication: `ON`
-   - Valid redirect URIs: `http://localhost:18080/login/oauth2/code/keycloak`
-   - Web origins: `http://localhost:18080`
-4. Test user を1人作成し、パスワードを設定する
+ローカルの infra overlay(`deploy/kustomize/infra/overlays/local`) は Keycloak realm import を有効化しており、以下を自動初期化する:
+- Realm: `miniserversystem`
+- Client: `gateway-bff` (secret: `fovHK8ZOOKXRpyMYYeShF0QQpIQbiIZe`)
+- User: `test` (password: `test`)
 
-Client Secret は Keycloak の `Credentials` 画面で確認し、`deploy/helm/miniserversystem-platform/values-local.yaml` の `OIDC_CLIENT_SECRET` と一致させる。
+通常は手動設定不要。カスタム値に変更したい場合のみ Keycloak 管理画面で上書きする。
 
 ### 4. アプリ起動とログイン確認
 ```bash
@@ -104,7 +101,7 @@ make dev
 確認手順:
 1. `http://localhost:18080/login` へアクセス
 2. Keycloak ログイン画面へ遷移することを確認
-3. テストユーザーでログイン
+3. `test / test` でログイン
 4. 認証後に `GET http://localhost:18080/v1/me` が 200 でユーザー情報を返すことを確認
 
 ### 5. OIDC疎通確認(切り分け用)
@@ -115,3 +112,16 @@ make dev
 ### CI方針
 - CI環境も Google OIDC ではなく Keycloak を利用する
 - `deploy/helm/miniserversystem-platform/values-ci.yaml` の `OIDC_*` は `keycloak` Service 向けURLで統一する
+- CIのinfra overlay(`deploy/kustomize/infra/overlays/ci`)で Keycloak realm import を有効化し、以下を自動初期化する
+  - Realm: `miniserversystem`
+  - Client: `gateway-bff` (secret: `changeit`)
+  - User: `test` (password: `test`)
+- `.github/workflows/ci.yaml` の E2E job で `script/e2e/check-keycloak.sh` を実行し、well-known endpoint と token 発行で初期化完了を検証する
+- `script/e2e/run.sh` では以下を通しで検証する
+  - `script/e2e/tests/*.sh` を順次実行するオーケストレーターとして動作
+  - Gateway/Keycloak の readiness
+  - Entitlement 付与 API 実行後に、E2E スクリプトから Postgres に直接クエリし `notification.processed_events` 反映と `notification.notifications` 1件作成を確認する（Outbox -> NATS -> Notification 到達確認）
+  - Notification 送信を意図的に失敗させ、再配送上限到達後に `notification.notification_dlq` へ隔離されること（`status=FAILED` / `attempt_count=maxAttempts`）を確認する
+  - OIDC ログイン後に `GET /v1/me` で `myUserId` を取得できること
+  - `GET /v1/users/{myUserId}` が `200` を返し、レスポンス `userId` が `myUserId` と一致すること
+  - `GET /v1/users/{otherUserId}` が `403`で拒否されること

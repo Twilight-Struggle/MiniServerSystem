@@ -23,7 +23,7 @@ public class GatewayApiExceptionHandler {
           ResponseEntity.status(HttpStatus.BAD_GATEWAY)
               .body(new ApiErrorResponse("ACCOUNT_UNAUTHORIZED", ex.getMessage()));
       case FORBIDDEN ->
-          ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+          ResponseEntity.status(HttpStatus.FORBIDDEN)
               .body(new ApiErrorResponse("ACCOUNT_FORBIDDEN", ex.getMessage()));
       case NOT_FOUND ->
           ResponseEntity.status(HttpStatus.NOT_FOUND)

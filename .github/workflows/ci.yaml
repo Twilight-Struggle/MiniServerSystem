@@ -108,6 +108,15 @@ jobs:
           cluster_name: mss
           wait: 120s
 
+      - name: Guard kubectl context (kind-mss)
+        run: |
+          set -eux
+          kubectl config use-context kind-mss
+          test "$(kubectl config current-context)" = "kind-mss"
+          kubectl --context kind-mss cluster-info
+          kubectl --context kind-mss get nodes
+          kubectl --context kind-mss wait --for=condition=Ready nodes --all --timeout=120s
+
       - name: Setup Helm
         uses: azure/setup-helm@v4
         with:
@@ -140,7 +149,22 @@ jobs:
 
           kubectl -n miniserversystem rollout status deploy/redis --timeout=180s
           kubectl -n miniserversystem rollout status deploy/nats  --timeout=180s
+          kubectl -n miniserversystem rollout status deploy/keycloak --timeout=240s
           kubectl -n miniserversystem rollout status statefulset/postgres --timeout=180s
+
+      - name: Verify Keycloak bootstrap (realm/client/user)
+        run: |
+          set -eux
+          chmod +x script/e2e/check-keycloak.sh
+          ./script/e2e/check-keycloak.sh \
+            --namespace miniserversystem \
+            --service keycloak \
+            --local-port 18081 \
+            --realm miniserversystem \
+            --client-id gateway-bff \
+            --client-secret changeit \
+            --username test \
+            --password test
 
       - name: Deploy apps (Helm values-ci.yaml)
         run: |
@@ -161,7 +185,7 @@ jobs:
           kubectl logs -n miniserversystem deploy/entitlement --tail=200 || true
           kubectl logs -n miniserversystem deploy/notification --tail=200 || true
 
-      - name: E2E (health checks + diagnostics)
+      - name: E2E (health + OIDC + BFF->Account ownership)
         run: |
           set -eux
           chmod +x script/e2e/run.sh

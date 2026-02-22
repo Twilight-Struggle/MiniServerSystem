@@ -80,4 +80,19 @@ class UserControllerTest {
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.code").value("ACCOUNT_NOT_FOUND"));
   }
+
+  @Test
+  void getUserReturns403WhenAccountForbidden() throws Exception {
+    when(oidcAuthenticatedUserService.resolveAuthenticatedUser(any()))
+        .thenReturn(new AuthenticatedUser("user-1", "ACTIVE", List.of("USER")));
+    when(accountUserClient.getUser(any(), any()))
+        .thenThrow(
+            new AccountIntegrationException(
+                AccountIntegrationException.Reason.FORBIDDEN, "account denied access"));
+
+    mockMvc
+        .perform(get("/v1/users/user-2"))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.code").value("ACCOUNT_FORBIDDEN"));
+  }
 }

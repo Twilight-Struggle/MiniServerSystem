@@ -1,0 +1,51 @@
+# Where: deploy/kustomize/infra/overlays/ci/keycloak-realm-configmap.yaml
+# What: CI-only Keycloak bootstrap realm/client/user definition.
+# Why: Ensure deterministic OIDC test fixtures without manual console setup.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keycloak-realm-bootstrap
+  namespace: miniserversystem
+data:
+  miniserversystem-realm.json: |
+    {
+      "realm": "miniserversystem",
+      "enabled": true,
+      "clients": [
+        {
+          "clientId": "gateway-bff",
+          "name": "gateway-bff",
+          "enabled": true,
+          "protocol": "openid-connect",
+          "publicClient": false,
+          "secret": "changeit",
+          "redirectUris": [
+            "http://localhost:18080/login/oauth2/code/keycloak",
+            "http://127.0.0.1:18080/login/oauth2/code/keycloak"
+          ],
+          "webOrigins": [
+            "http://localhost:18080",
+            "http://127.0.0.1:18080"
+          ],
+          "standardFlowEnabled": true,
+          "directAccessGrantsEnabled": true
+        }
+      ],
+      "users": [
+        {
+          "username": "test",
+          "enabled": true,
+          "emailVerified": true,
+          "firstName": "E2E",
+          "lastName": "User",
+          "email": "test@example.com",
+          "credentials": [
+            {
+              "type": "password",
+              "value": "test",
+              "temporary": false
+            }
+          ]
+        }
+      ]
+    }
