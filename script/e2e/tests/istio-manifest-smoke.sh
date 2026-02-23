@@ -30,7 +30,7 @@ kubectl kustomize "${INFRA_OVERLAY}" > "${KUSTOMIZE_RENDERED}"
 assert_contains() {
   local file="$1"
   local pattern="$2"
-  if ! grep -Fq "$pattern" "$file"; then
+  if ! grep -Fq -- "$pattern" "$file"; then
     echo "ERROR: expected pattern not found: ${pattern}" >&2
     exit 1
   fi
@@ -70,10 +70,23 @@ assert_contains "${HELM_RENDERED}" "sidecar.istio.io/inject: \"true\""
 assert_contains "${HELM_RENDERED}" "traffic.sidecar.istio.io/excludeOutboundPorts: \"4222\""
 assert_contains "${HELM_RENDERED}" "exact: \"/v1/entitlements/grants\""
 assert_contains "${HELM_RENDERED}" "exact: \"/v1/entitlements/revokes\""
+assert_contains "${HELM_RENDERED}" "name: OTEL_SERVICE_NAME"
+assert_contains "${HELM_RENDERED}" "value: \"gateway\""
+assert_contains "${HELM_RENDERED}" "value: \"account\""
+assert_contains "${HELM_RENDERED}" "value: \"entitlement\""
+assert_contains "${HELM_RENDERED}" "value: \"notification\""
+assert_contains "${HELM_RENDERED}" "name: OTEL_EXPORTER_OTLP_ENDPOINT"
+assert_contains "${HELM_RENDERED}" "value: \"http://otel-collector:4317\""
+assert_contains "${HELM_RENDERED}" "name: JAVA_TOOL_OPTIONS"
+assert_contains "${HELM_RENDERED}" "-javaagent:/otel/opentelemetry-javaagent.jar"
 
 assert_contains "${KUSTOMIZE_RENDERED}" "kind: NetworkPolicy"
 assert_contains "${KUSTOMIZE_RENDERED}" "name: postgres-allow-apps-only"
 assert_contains "${KUSTOMIZE_RENDERED}" "name: nats-allow-apps-only"
 assert_contains "${KUSTOMIZE_RENDERED}" "name: redis-allow-matchmaking-only"
+assert_contains "${KUSTOMIZE_RENDERED}" "name: otel-collector-config"
+assert_contains "${KUSTOMIZE_RENDERED}" "name: otel-collector"
+assert_contains "${KUSTOMIZE_RENDERED}" "name: otlp-grpc"
+assert_contains "${KUSTOMIZE_RENDERED}" "name: otlp-http"
 
 echo "OK: Istio/NetworkPolicy manifest smoke test passed"

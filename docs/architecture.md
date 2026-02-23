@@ -209,6 +209,8 @@ account 側:
 - 各サービスはメトリクス・ログ・トレースを出力する
 - gateway-bff では OIDC 失敗と account 連携失敗を識別可能にする
 - entitlement/notification では outbox 滞留・再試行・DLQ 増加を監視対象にする
+- 分散トレースは OpenTelemetry Java Agent を `gateway-bff` / `account` / `entitlement` / `notification` に適用し、OTLP で OpenTelemetry Collector に送る
+- `entitlement -> NATS -> notification` の非同期経路も trace context を伝播対象に含める（計装の有効化を前提）
 
 詳細は以下へ分離:
 - `docs/slo.md`

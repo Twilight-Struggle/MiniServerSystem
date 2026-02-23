@@ -3,6 +3,7 @@ resources:
   - postgres.yaml
   - redis.yaml
   - nats.yaml
+  - otel-collector.yaml
   - keycloak.yaml
   - keycloak-ingress.yaml
   - network-policies.yaml
