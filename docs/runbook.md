@@ -134,14 +134,14 @@
 確認SQL:
 ```sql
 SELECT status, COUNT(*)
-FROM users
+FROM account.users
 GROUP BY status
 ORDER BY status;
 ```
 
 ```sql
 SELECT action, COUNT(*)
-FROM audit_logs
+FROM account.audit_logs
 WHERE created_at >= NOW() - INTERVAL '1 day'
 GROUP BY action
 ORDER BY action;
@@ -169,14 +169,14 @@ ORDER BY action;
 確認SQL:
 ```sql
 SELECT provider, COUNT(*)
-FROM identities
+FROM account.identities
 GROUP BY provider
 ORDER BY COUNT(*) DESC;
 ```
 
 ```sql
 SELECT COUNT(*)
-FROM users
+FROM account.users
 WHERE created_at >= NOW() - INTERVAL '10 minutes';
 ```
 
@@ -204,14 +204,14 @@ WHERE created_at >= NOW() - INTERVAL '10 minutes';
 確認SQL:
 ```sql
 SELECT status, COUNT(*)
-FROM notifications
+FROM notification.notifications
 GROUP BY status
 ORDER BY status;
 ```
 
 ```sql
 SELECT COUNT(*)
-FROM notifications
+FROM notification.notifications
 WHERE created_at < NOW() - INTERVAL '10 minutes'
   AND status IN ('PENDING', 'PROCESSING');
 ```
@@ -261,15 +261,15 @@ WHERE created_at < NOW() - INTERVAL '10 minutes'
 ### 6.3 整合性チェック
 ```sql
 SELECT COUNT(*)
-FROM notifications
+FROM notification.notifications
 WHERE status = 'SENT'
   AND (locked_by IS NOT NULL OR next_retry_at IS NOT NULL);
 ```
 
 ```sql
 SELECT COUNT(*)
-FROM identities i
-LEFT JOIN users u ON u.user_id = i.user_id
+FROM account.identities i
+LEFT JOIN account.users u ON u.user_id = i.user_id
 WHERE u.user_id IS NULL;
 ```
 

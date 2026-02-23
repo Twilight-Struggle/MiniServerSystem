@@ -29,7 +29,6 @@
 ### 2.2 非ゴール
 - マルチリージョン厳密整合
 - グローバルな厳密全順序
-- 強固なサービス間ゼロトラスト（現状は共有トークン方式）
 
 ## 3. システム境界とコンポーネント
 
@@ -44,10 +43,12 @@
 - Gateway-BFF Service（OAuth2 Login, API Aggregation）
 - Account Service（Identity Resolve, User Profile, Admin Action）
 - Entitlement Service（権利正本 + Outbox Relay）
+- Matchmaking Service（現状は疎通確認用の最小エンドポイント）
 - Notification Service（購読処理 + 送信状態管理 + DLQ）
 - Keycloak（OIDC Provider）
 - NATS JetStream（イベントブローカー）
-- PostgreSQL（Account / Entitlement / Notification それぞれの DB）
+- Redis（Matchmaking 用。現時点は将来拡張の前提）
+- PostgreSQL（単一インスタンス上で `account` / `entitlement` / `notification` schema を分離）
 
 ## 4. コンポーネント責務
 
@@ -130,6 +131,7 @@
 - `processed_events`: event_id 重複排除
 - `notifications`: 通知状態管理
 - `notification_dlq`: 恒久失敗イベント隔離
+- `notification_nats_dlq`: JetStream advisory（MaxDeliver / MSG_TERMINATED）由来の stream_seq 保持
 
 ## 7. 主要フロー
 
@@ -218,6 +220,7 @@ account 側:
 - `/v1/users/{userId}/profile` は現時点で実データ集約未実装（プレースホルダー）
 - gateway-bff → account のアプリレイヤーCB（Resilience4j 等）は未導入（Istioのtimeout/retry/connectionPool/outlierDetectionは導入済み）
 - 内部 API は Istio mTLS(STRICT) + AuthorizationPolicy でゼロトラスト化し、共有トークン方式はアプリレイヤーの追加ガードとして併用する
+- Matchmaking は `/` の最小疎通エンドポイントのみで、キュー参加/マッチ成立ドメインは未実装
 
 ## 12. 主要設計判断
 
