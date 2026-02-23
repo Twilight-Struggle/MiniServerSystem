@@ -15,7 +15,7 @@ spring:
 
 nats:
   enabled: true
-  url: ${NATS_URL:nats://nats:4222}
+  url: ${NATS_URL:nats://nats.miniserversystem.svc.cluster.local:4222}
 
 notification:
   delivery:

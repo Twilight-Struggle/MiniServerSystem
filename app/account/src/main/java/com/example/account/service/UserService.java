@@ -1,5 +1,6 @@
 package com.example.account.service;
 
+import com.example.account.api.UserNotFoundException;
 import com.example.account.api.request.UserPatchRequest;
 import com.example.account.api.response.UserResponse;
 import com.example.account.model.UserRecord;
@@ -8,6 +9,7 @@ import com.example.account.repository.UserRepository;
 import java.util.List;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -22,14 +24,18 @@ public class UserService {
     final UserRecord user =
         userRepository
             .findByUserId(userId)
-            .orElseThrow(() -> new IllegalArgumentException("user not found"));
+            .orElseThrow(() -> new UserNotFoundException("user not found"));
     final List<String> roles = roleRepository.findRolesByUserId(userId);
     return toResponse(user, roles);
   }
 
   public UserResponse patchUser(String userId, @NonNull UserPatchRequest request) {
-    final UserRecord updated =
-        userRepository.updateProfile(userId, request.displayName(), request.locale());
+    final UserRecord updated;
+    try {
+      updated = userRepository.updateProfile(userId, request.displayName(), request.locale());
+    } catch (EmptyResultDataAccessException ex) {
+      throw new UserNotFoundException("user not found");
+    }
     final List<String> roles = roleRepository.findRolesByUserId(userId);
     return toResponse(updated, roles);
   }

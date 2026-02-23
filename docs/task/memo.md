@@ -17,9 +17,9 @@ Observability: OpenTelemetry で trace を出す（Jaeger/Tempo をローカル�
 #### NetworkPolicy で境界を可視化
 特定アプリ→DB のみ許可
 
+Istio(mTLS, timeout, retry, CB)
+ログ、メトリクス、トレース
 デプロイ
-メトリクス + RUNBOOK
-Istio(mTLS, timeout, retry, CB, fallback)
 Profile Aggregate(gateway-bff)←account + entitlement + matchmaking
 
 ### Static Analysis

@@ -1,0 +1,40 @@
+{{- /*
+Where: deploy/helm/miniserversystem-platform/templates/istio-destinationrules.yaml
+What: DestinationRules for infra dependencies and gateway->account resilience policy.
+Why: Keep non-mesh plaintext routing and apply connection-level protection for gateway->account.
+*/ -}}
+{{- if .Values.istio.enabled }}
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: nats-plaintext
+spec:
+  host: nats.{{ .Release.Namespace }}.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: DISABLE
+{{- if .Values.istio.gatewayToAccountCircuitBreaker.enabled }}
+---
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: account-circuit-breaker
+spec:
+  host: account.{{ .Release.Namespace }}.svc.cluster.local
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: {{ default 100 .Values.istio.gatewayToAccountCircuitBreaker.connectionPool.tcp.maxConnections }}
+        connectTimeout: {{ default "1s" .Values.istio.gatewayToAccountCircuitBreaker.connectionPool.tcp.connectTimeout | quote }}
+      http:
+        http1MaxPendingRequests: {{ default 50 .Values.istio.gatewayToAccountCircuitBreaker.connectionPool.http.http1MaxPendingRequests }}
+        maxRequestsPerConnection: {{ default 20 .Values.istio.gatewayToAccountCircuitBreaker.connectionPool.http.maxRequestsPerConnection }}
+        maxRetries: {{ default 3 .Values.istio.gatewayToAccountCircuitBreaker.connectionPool.http.maxRetries }}
+    outlierDetection:
+      consecutive5xxErrors: {{ default 5 .Values.istio.gatewayToAccountCircuitBreaker.outlierDetection.consecutive5xxErrors }}
+      interval: {{ default "10s" .Values.istio.gatewayToAccountCircuitBreaker.outlierDetection.interval | quote }}
+      baseEjectionTime: {{ default "30s" .Values.istio.gatewayToAccountCircuitBreaker.outlierDetection.baseEjectionTime | quote }}
+      maxEjectionPercent: {{ default 50 .Values.istio.gatewayToAccountCircuitBreaker.outlierDetection.maxEjectionPercent }}
+      minHealthPercent: {{ default 0 .Values.istio.gatewayToAccountCircuitBreaker.outlierDetection.minHealthPercent }}
+{{- end }}
+{{- end }}

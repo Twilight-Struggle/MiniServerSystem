@@ -100,10 +100,18 @@ run_nats_box() {
   local pod_name="nats-box-e2e-$(date +%s)-${RANDOM}"
   local phase=""
   local logs=""
+  local pod_overrides=""
+
+  # nats-box is only a temporary E2E helper pod.
+  # In CI namespace, Istio sidecar auto-injection is enabled by default.
+  # For direct NATS (non-mesh sidecar=false) access on 4222, disable injection here.
+  pod_overrides='{"apiVersion":"v1","metadata":{"annotations":{"sidecar.istio.io/inject":"false"}}}'
 
   kubectl -n "${NAMESPACE}" run "${pod_name}" \
     --image="${NATS_BOX_IMAGE}" \
+    --labels="app=e2e-nats-box" \
     --restart=Never \
+    --overrides="${pod_overrides}" \
     --command -- sh -c "${command}" >/dev/null
 
   local end=$((SECONDS + TIMEOUT_SEC))

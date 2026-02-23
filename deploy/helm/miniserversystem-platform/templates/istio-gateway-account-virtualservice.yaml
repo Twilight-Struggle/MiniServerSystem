@@ -1,0 +1,61 @@
+{{- /*
+Where: deploy/helm/miniserversystem-platform/templates/istio-gateway-account-virtualservice.yaml
+What: VirtualService timeout policy for gateway-bff -> account internal calls.
+Why: Bound downstream call latency at mesh layer to protect gateway SLO and fail fast.
+*/ -}}
+{{- if .Values.istio.enabled }}
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: gateway-account-timeout
+spec:
+  hosts:
+    - account.{{ .Release.Namespace }}.svc.cluster.local
+  http:
+    - name: gateway-to-account-users-get
+      match:
+        - sourceLabels:
+            app: gateway
+          method:
+            exact: GET
+          uri:
+            prefix: /users/
+      timeout: {{ default "1s" .Values.istio.gatewayToAccountTimeout | quote }}
+      retries:
+        attempts: {{ default 2 .Values.istio.gatewayToAccountRetry.attempts }}
+        perTryTimeout: {{ default "300ms" .Values.istio.gatewayToAccountRetry.perTryTimeout | quote }}
+        retryOn: {{ default "connect-failure,refused-stream,unavailable,cancelled" .Values.istio.gatewayToAccountRetry.retryOn | quote }}
+      route:
+        - destination:
+            host: account.{{ .Release.Namespace }}.svc.cluster.local
+            port:
+              number: 80
+    - name: gateway-to-account-resolve-identity
+      match:
+        - sourceLabels:
+            app: gateway
+          method:
+            exact: POST
+          uri:
+            exact: /identities:resolve
+      timeout: {{ default "1s" .Values.istio.gatewayToAccountTimeout | quote }}
+      retries:
+        attempts: {{ default 2 .Values.istio.gatewayToAccountRetry.attempts }}
+        perTryTimeout: {{ default "300ms" .Values.istio.gatewayToAccountRetry.perTryTimeout | quote }}
+        retryOn: {{ default "connect-failure,refused-stream,unavailable,cancelled" .Values.istio.gatewayToAccountRetry.retryOn | quote }}
+      route:
+        - destination:
+            host: account.{{ .Release.Namespace }}.svc.cluster.local
+            port:
+              number: 80
+    - name: gateway-to-account-default
+      match:
+        - sourceLabels:
+            app: gateway
+      timeout: {{ default "1s" .Values.istio.gatewayToAccountTimeout | quote }}
+      route:
+        - destination:
+            host: account.{{ .Release.Namespace }}.svc.cluster.local
+            port:
+              number: 80
+{{- end }}

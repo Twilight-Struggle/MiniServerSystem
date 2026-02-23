@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
+import com.example.account.api.UserNotFoundException;
 import com.example.account.api.request.UserPatchRequest;
 import com.example.account.api.response.UserResponse;
 import com.example.account.model.AccountStatus;
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.EmptyResultDataAccessException;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -31,8 +33,7 @@ class UserServiceTest {
   void getUserThrowsWhenNotFound() {
     when(userRepository.findByUserId("missing")).thenReturn(Optional.empty());
 
-    assertThatThrownBy(() -> service.getUser("missing"))
-        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> service.getUser("missing")).isInstanceOf(UserNotFoundException.class);
   }
 
   @Test
@@ -47,5 +48,14 @@ class UserServiceTest {
 
     assertThat(response.userId()).isEqualTo("user-1");
     assertThat(response.roles()).containsExactly("USER");
+  }
+
+  @Test
+  void patchUserThrowsWhenNotFound() {
+    when(userRepository.updateProfile("missing", "new", "ja-JP"))
+        .thenThrow(new EmptyResultDataAccessException(1));
+
+    assertThatThrownBy(() -> service.patchUser("missing", new UserPatchRequest("new", "ja-JP")))
+        .isInstanceOf(UserNotFoundException.class);
   }
 }

@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.account.api.UserNotFoundException;
 import com.example.account.model.AccountStatus;
 import com.example.account.model.AuditLogRecord;
 import com.example.account.model.UserRecord;
@@ -81,5 +82,13 @@ class AdminUserServiceTest {
     final JsonNode metadata = objectMapper.readTree(captor.getValue().metadataJson());
     org.assertj.core.api.Assertions.assertThat(metadata.get("reason").asText())
         .isEqualTo("bad \"input\"");
+  }
+
+  @Test
+  void suspendThrowsWhenTargetUserNotFound() {
+    when(userRepository.updateStatus(eq("missing"), eq("SUSPENDED"))).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> service.suspendUser("admin-1", "missing", "abuse"))
+        .isInstanceOf(UserNotFoundException.class);
   }
 }
