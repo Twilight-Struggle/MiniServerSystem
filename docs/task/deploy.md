@@ -125,6 +125,20 @@ kubectl -n miniserversystem port-forward svc/jaeger 16686:16686
 ```
 ブラウザで `http://localhost:16686` を開く
 
+### 4.2 ローカルメトリクス確認（Prometheus/Grafana）
+- local overlay では `prometheus` と `grafana` が起動する
+- Prometheus は `gateway/account/entitlement/matchmaking/notification` の `/actuator/prometheus` を scrape する
+- Prometheus UI 確認手順:
+```bash
+kubectl -n miniserversystem port-forward svc/prometheus 9090:9090
+```
+ブラウザで `http://localhost:9090` を開く
+- Grafana UI 確認手順:
+```bash
+kubectl -n miniserversystem port-forward svc/grafana 3000:3000
+```
+ブラウザで `http://localhost:3000` を開く（初期ログイン: `admin/admin`）
+
 ### 5. OIDC疎通確認(切り分け用)
 以下が 200 で返ることを確認する:
 - `http://keycloak.localhost/realms/miniserversystem/.well-known/openid-configuration`

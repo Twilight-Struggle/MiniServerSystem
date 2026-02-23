@@ -4,6 +4,8 @@ resources:
   - redis.yaml
   - nats.yaml
   - otel-collector.yaml
+  - prometheus.yaml
+  - grafana.yaml
   - keycloak.yaml
   - keycloak-ingress.yaml
   - network-policies.yaml
