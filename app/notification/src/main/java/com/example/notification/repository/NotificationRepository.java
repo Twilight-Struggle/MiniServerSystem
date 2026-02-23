@@ -226,6 +226,26 @@ public class NotificationRepository {
     return count == null ? 0 : count;
   }
 
+  public int countBacklog(Instant now) {
+    final String sql =
+        """
+        SELECT COUNT(*)
+        FROM notifications
+        WHERE (
+          status = 'PENDING'
+          AND (next_retry_at IS NULL OR next_retry_at <= :now)
+        )
+        OR (
+          status = 'PROCESSING'
+          AND (lease_until IS NULL OR lease_until <= :now)
+        )
+        """;
+    final MapSqlParameterSource params =
+        new MapSqlParameterSource().addValue("now", toTimestamp(now));
+    final Integer count = jdbcTemplate.queryForObject(sql, params, Integer.class);
+    return count == null ? 0 : count;
+  }
+
   private NotificationRecord mapRow(ResultSet rs, int rowNum) throws SQLException {
     return new NotificationRecord(
         UUID.fromString(rs.getString("notification_id")),

@@ -16,6 +16,9 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
     implementation("net.logstash.logback:logstash-logback-encoder:$logstashLogbackEncoderVersion")
     implementation(project(":libs:common"))
+    spotbugs("com.github.spotbugs:spotbugs:4.9.7")
+    spotbugs("com.github.spotbugs:spotbugs-annotations:4.9.7")
+    compileOnly("com.github.spotbugs:spotbugs-annotations:4.9.7")
     compileOnly("org.projectlombok:lombok:$lombokVersion")
     annotationProcessor("org.projectlombok:lombok:$lombokVersion")
 

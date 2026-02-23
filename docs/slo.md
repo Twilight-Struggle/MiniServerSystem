@@ -176,6 +176,23 @@ SLI-D: DLQ 発生件数
 実装観点のメトリクス（RED/USE、outbox/backlog、OIDC/account 連携失敗）や計測ポイントは、
 アーキテクチャと障害モードに紐付けて管理する。
 
+主要なアプリ固有メトリクス名:
+- `gateway.login.total{result}`: `/login` 導線結果（`redirect` / `error`）
+- `gateway.account.integration.error.total{code}`: account 連携エラー内訳（`ACCOUNT_TIMEOUT` / `ACCOUNT_BAD_GATEWAY` など）
+- `entitlement.command.total{action,result}`: grant/revoke の処理結果件数
+- `entitlement.outbox.publish.delay`: outbox publish 遅延（`created_at -> published_at`）
+- `entitlement.outbox.backlog.age`: outbox claim 時の滞留時間（`now - created_at`）
+- `entitlement.outbox.failed.current`: outbox `FAILED` 現在件数
+- `notification.delivery.total{result}`: 配信結果（`sent` / `failed` / `retry_scheduled`）
+- `notification.delivery.e2e.delay`: End-to-End 遅延（`occurred_at -> sent_at`）
+- `notification.backlog.current`: backlog 件数（`PENDING` + lease 切れ `PROCESSING`）
+- `notification.dlq.total`: DLQ へ隔離した累計件数
+
+HTTP 系 SLI（Gateway-BFF / Account）の成功率・レイテンシは `http.server.requests`（uri / status / exception タグ）を一次指標として集計する。
+
+注記:
+- Matchmaking のキュー参加/マッチ成立フローは未実装のため、`Time-to-Match` 系メトリクスは今後の実装対象とする。
+
 - 構成とデータフロー: `docs/architecture.md`
 - 監視対象と異常パターン: `docs/failure-modes.md`
 - 一次対応手順: `docs/runbook.md`

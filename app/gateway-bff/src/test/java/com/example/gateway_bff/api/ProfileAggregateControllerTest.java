@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.gateway_bff.api.response.ProfileAggregateResponse;
+import com.example.gateway_bff.service.GatewayMetrics;
 import com.example.gateway_bff.service.ProfileAggregateService;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -22,6 +23,7 @@ class ProfileAggregateControllerTest {
   @Autowired private MockMvc mockMvc;
 
   @MockitoBean private ProfileAggregateService profileAggregateService;
+  @MockitoBean private GatewayMetrics gatewayMetrics;
 
   @Test
   void getProfileReturnsAggregatedPayload() throws Exception {

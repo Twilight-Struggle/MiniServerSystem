@@ -26,6 +26,7 @@ import com.example.entitlement.repository.IdempotencyKeyRepository;
 import com.example.entitlement.repository.OutboxEventRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -56,6 +57,7 @@ public class EntitlementService {
   private final RequestHasher requestHasher;
   private final ObjectMapper objectMapper;
   private final EntitlementIdempotencyProperties idempotencyProperties;
+  private final EntitlementMetrics metrics;
   private final Clock clock;
 
   @Transactional(noRollbackFor = InvalidEntitlementTransitionException.class)
@@ -78,6 +80,9 @@ public class EntitlementService {
     return new EntitlementsResponse(userId, items);
   }
 
+  @SuppressFBWarnings(
+      value = "THROWS_METHOD_THROWS_RUNTIMEEXCEPTION",
+      justification = "失敗時メトリクス記録後に原例外を再送出し、既存の API 契約と例外分類を維持するため")
   private EntitlementResponse handleCommand(
       EntitlementRequest request,
       String idempotencyKey,
@@ -92,6 +97,7 @@ public class EntitlementService {
     // ロック取得後に再チェックし、登録済みなら同一レスポンスを再利用する。
     final Optional<IdempotencyRecord> existing = idempotencyKeyRepository.findByKey(idempotencyKey);
     if (existing.isPresent()) {
+      metrics.recordCommand(action, "idempotency_reused");
       return reuseIdempotentResponse(existing.get(), requestHash);
     }
     final Instant now = Instant.now(clock);
@@ -122,12 +128,17 @@ public class EntitlementService {
               record.get().version(),
               record.get().updatedAt());
       storeIdempotency(idempotencyKey, requestHash, SUCCESS_STATUS_CODE, response, now);
+      metrics.recordCommand(action, "success");
       return response;
     } catch (InvalidEntitlementTransitionException ex) {
       // 失敗応答も冪等に再利用できるよう、例外でも idempotency を保存する
       final ApiErrorResponse errorResponse =
           new ApiErrorResponse(ApiErrorCode.ENTITLEMENT_STATE_CONFLICT, ex.getMessage());
       storeIdempotency(idempotencyKey, requestHash, CONFLICT_STATUS_CODE, errorResponse, now);
+      metrics.recordCommand(action, "conflict");
+      throw ex;
+    } catch (RuntimeException ex) {
+      metrics.recordCommand(action, "error");
       throw ex;
     }
   }
