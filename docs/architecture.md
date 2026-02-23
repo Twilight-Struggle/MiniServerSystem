@@ -212,6 +212,7 @@ account 側:
 - 分散トレースは OpenTelemetry Java Agent を `gateway-bff` / `account` / `entitlement` / `notification` に適用し、OTLP で OpenTelemetry Collector に送る
 - `entitlement -> NATS -> notification` の非同期経路も trace context を伝播対象に含める（計装の有効化を前提）
 - アプリログは JSON 構造化して出力し、`trace_id` / `span_id` を MDC から埋め込んでトレースと突合可能にする
+- 追加の運用キーとして `request_id` / `user_id` / `http_method` / `http_path` / `client_ip` / `idempotency_key` をMDCに格納し、notification の NATS 消費では `event_id` / `event_type` / `source_id` も出力する
 
 詳細は以下へ分離:
 - `docs/slo.md`

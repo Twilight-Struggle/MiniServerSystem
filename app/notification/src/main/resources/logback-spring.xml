@@ -21,7 +21,16 @@
               "thread":"%thread",
               "trace_id":"%X{trace_id:-%X{traceId:-}}",
               "span_id":"%X{span_id:-%X{spanId:-}}",
-              "trace_flags":"%X{trace_flags:-}"
+              "trace_flags":"%X{trace_flags:-}",
+              "request_id":"%X{request_id:-}",
+              "user_id":"%X{user_id:-}",
+              "http_method":"%X{http_method:-}",
+              "http_path":"%X{http_path:-}",
+              "client_ip":"%X{client_ip:-}",
+              "idempotency_key":"%X{idempotency_key:-}",
+              "event_id":"%X{event_id:-}",
+              "event_type":"%X{event_type:-}",
+              "source_id":"%X{source_id:-}"
             }
           </pattern>
         </pattern>

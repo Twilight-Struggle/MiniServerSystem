@@ -25,5 +25,7 @@ class LoggingConfigurationTest {
     assertThat(configText).contains("LoggingEventCompositeJsonEncoder");
     assertThat(configText).contains("\"trace_id\":\"%X{trace_id:-%X{traceId:-}}\"");
     assertThat(configText).contains("\"span_id\":\"%X{span_id:-%X{spanId:-}}\"");
+    assertThat(configText).contains("\"request_id\":\"%X{request_id:-}\"");
+    assertThat(configText).contains("\"user_id\":\"%X{user_id:-}\"");
   }
 }
