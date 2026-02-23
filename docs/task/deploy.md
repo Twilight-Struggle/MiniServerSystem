@@ -128,6 +128,8 @@ kubectl -n miniserversystem port-forward svc/jaeger 16686:16686
 ### 4.2 ローカルメトリクス確認（Prometheus/Grafana）
 - local overlay では `prometheus` と `grafana` が起動する
 - Prometheus は `gateway/account/entitlement/matchmaking/notification` の `/actuator/prometheus` を scrape する
+- 各アプリは `health/info/prometheus` を actuator 公開し、`application` タグと `http.server.requests` ヒストグラムを出力する
+- Istio `STRICT mTLS` 下で scrape するため、`prometheus` は sidecar 注入を有効化し、`/actuator/prometheus` のみ AuthorizationPolicy で許可する
 - Prometheus UI 確認手順:
 ```bash
 kubectl -n miniserversystem port-forward svc/prometheus 9090:9090

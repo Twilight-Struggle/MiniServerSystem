@@ -32,7 +32,8 @@ public class GatewaySecurityConfig {
                         "/error",
                         "/actuator/health",
                         "/actuator/health/**",
-                        "/actuator/info")
+                        "/actuator/info",
+                        "/actuator/prometheus")
                     .permitAll()
                     .requestMatchers("/v1/me")
                     .authenticated()

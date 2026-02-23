@@ -42,8 +42,9 @@ spec:
       labels:
         app: prometheus
       annotations:
-        sidecar.istio.io/inject: "false"
+        sidecar.istio.io/inject: "true"
     spec:
+      serviceAccountName: prometheus
       securityContext:
         runAsUser: 65534
         runAsGroup: 65534
@@ -89,3 +90,9 @@ spec:
     - name: http
       port: 9090
       targetPort: http
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+  namespace: miniserversystem

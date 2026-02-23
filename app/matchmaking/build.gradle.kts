@@ -7,6 +7,7 @@ plugins {
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("io.micrometer:micrometer-registry-prometheus")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 }
@@ -23,7 +24,7 @@ jib {
 
     // to.image は skaffold/CI から -Djib.to.image=... で上書き
     to {
-        image = "account:dev"
+        image = "matchmaking:dev"
     }
 
     container {

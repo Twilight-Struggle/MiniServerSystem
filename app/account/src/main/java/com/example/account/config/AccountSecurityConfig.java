@@ -39,7 +39,12 @@ public class AccountSecurityConfig {
         .authorizeHttpRequests(
             auth ->
                 auth.requestMatchers(
-                        "/", "/error", "/actuator/health", "/actuator/health/**", "/actuator/info")
+                        "/",
+                        "/error",
+                        "/actuator/health",
+                        "/actuator/health/**",
+                        "/actuator/info",
+                        "/actuator/prometheus")
                     .permitAll()
                     .requestMatchers(HttpMethod.POST, "/identities:resolve")
                     .hasRole("INTERNAL")
