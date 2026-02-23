@@ -14,6 +14,12 @@ public class AccountApiExceptionHandler {
         .body(new ApiErrorResponse("BAD_REQUEST", ex.getMessage()));
   }
 
+  @ExceptionHandler(UserNotFoundException.class)
+  public ResponseEntity<ApiErrorResponse> handleUserNotFound(UserNotFoundException ex) {
+    return ResponseEntity.status(HttpStatus.NOT_FOUND)
+        .body(new ApiErrorResponse("NOT_FOUND", ex.getMessage()));
+  }
+
   @ExceptionHandler(UnsupportedOperationException.class)
   public ResponseEntity<ApiErrorResponse> handleNotImplemented(UnsupportedOperationException ex) {
     return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)

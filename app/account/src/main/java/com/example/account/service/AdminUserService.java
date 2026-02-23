@@ -1,5 +1,6 @@
 package com.example.account.service;
 
+import com.example.account.api.UserNotFoundException;
 import com.example.account.model.AuditLogRecord;
 import com.example.account.repository.AuditLogRepository;
 import com.example.account.repository.UserRepository;
@@ -33,7 +34,7 @@ public class AdminUserService {
 
     userRepository
         .updateStatus(targetUserId, "SUSPENDED")
-        .orElseThrow(() -> new IllegalArgumentException("user not found"));
+        .orElseThrow(() -> new UserNotFoundException("user not found"));
 
     final String metadata = createMetadataJson(reason);
     final AuditLogRecord audit =

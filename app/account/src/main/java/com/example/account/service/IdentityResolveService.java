@@ -87,7 +87,7 @@ public class IdentityResolveService {
     final UserRecord user =
         userRepository
             .findByUserId(userId)
-            .orElseThrow(() -> new IllegalArgumentException("user not found"));
+            .orElseThrow(() -> new IllegalStateException("resolved user is missing"));
     final List<String> roles = roleRepository.findRolesByUserId(userId);
     return new IdentityResolveResponse(user.userId(), user.status().name(), roles);
   }
