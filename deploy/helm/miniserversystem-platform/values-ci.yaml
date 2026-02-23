@@ -83,6 +83,7 @@ ingress:
 
 istio:
   enabled: true
+  gatewayToAccountTimeout: 1s
   ingress:
     enabled: true
     hosts:

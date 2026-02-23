@@ -1,0 +1,25 @@
+{{- /*
+Where: deploy/helm/miniserversystem-platform/templates/istio-gateway-account-virtualservice.yaml
+What: VirtualService timeout policy for gateway-bff -> account internal calls.
+Why: Bound downstream call latency at mesh layer to protect gateway SLO and fail fast.
+*/ -}}
+{{- if .Values.istio.enabled }}
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: gateway-account-timeout
+spec:
+  hosts:
+    - account.{{ .Release.Namespace }}.svc.cluster.local
+  http:
+    - name: gateway-to-account
+      match:
+        - sourceLabels:
+            app: gateway
+      timeout: {{ default "1s" .Values.istio.gatewayToAccountTimeout | quote }}
+      route:
+        - destination:
+            host: account.{{ .Release.Namespace }}.svc.cluster.local
+            port:
+              number: 80
+{{- end }}
