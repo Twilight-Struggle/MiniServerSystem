@@ -1,8 +1,10 @@
 resources:
   - ../../base
   - nats-pvc.yaml
+  - jaeger.yaml
   - keycloak-realm-configmap.yaml
 patches:
   - path: postgres-pvc.yaml
   - path: nats-pvc-patch.yaml
+  - path: otel-collector-configmap-patch.yaml
   - path: keycloak-bootstrap-patch.yaml

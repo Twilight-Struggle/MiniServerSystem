@@ -88,5 +88,8 @@ assert_contains "${KUSTOMIZE_RENDERED}" "name: otel-collector-config"
 assert_contains "${KUSTOMIZE_RENDERED}" "name: otel-collector"
 assert_contains "${KUSTOMIZE_RENDERED}" "name: otlp-grpc"
 assert_contains "${KUSTOMIZE_RENDERED}" "name: otlp-http"
+assert_contains "${KUSTOMIZE_RENDERED}" "name: jaeger"
+assert_contains "${KUSTOMIZE_RENDERED}" "jaegertracing/all-in-one:1.62.0"
+assert_contains "${KUSTOMIZE_RENDERED}" "endpoint: jaeger:4317"
 
 echo "OK: Istio/NetworkPolicy manifest smoke test passed"
