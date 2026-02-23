@@ -1,0 +1,38 @@
+<!--
+  どこで: app/gateway-bff/src/main/resources/logback-spring.xml
+  何を: gateway-bff のログを JSON 形式で標準出力し、trace/span を MDC から埋め込む
+  なぜ: 分散トレースとアプリログを同じIDで突合できるようにするため
+-->
+<configuration>
+  <springProperty scope="context" name="serviceName" source="spring.application.name" defaultValue="gateway-bff"/>
+
+  <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+      <providers>
+        <timestamp>
+          <fieldName>@timestamp</fieldName>
+        </timestamp>
+        <pattern>
+          <pattern>
+            {
+              "service.name":"${serviceName}",
+              "severity":"%level",
+              "logger":"%logger{40}",
+              "thread":"%thread",
+              "trace_id":"%X{trace_id:-%X{traceId:-}}",
+              "span_id":"%X{span_id:-%X{spanId:-}}",
+              "trace_flags":"%X{trace_flags:-}"
+            }
+          </pattern>
+        </pattern>
+        <mdc/>
+        <message/>
+        <stackTrace/>
+      </providers>
+    </encoder>
+  </appender>
+
+  <root level="INFO">
+    <appender-ref ref="JSON_CONSOLE"/>
+  </root>
+</configuration>
