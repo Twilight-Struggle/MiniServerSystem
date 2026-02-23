@@ -1,6 +1,7 @@
 package com.example.gateway_bff.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -21,7 +22,7 @@ class RequestMdcInterceptorTest {
   }
 
   @Test
-  void putAndRemoveMdcValuesAroundRequestLifecycle() throws Exception {
+  void putAndRemoveMdcValuesAroundRequestLifecycle() {
     final TestingAuthenticationToken authentication =
         new TestingAuthenticationToken("user-123", "N/A");
     authentication.setAuthenticated(true);
@@ -33,7 +34,11 @@ class RequestMdcInterceptorTest {
     request.addHeader("Idempotency-Key", "idem-1");
     final MockHttpServletResponse response = new MockHttpServletResponse();
 
-    interceptor.preHandle(request, response, new Object());
+    try {
+      interceptor.preHandle(request, response, new Object());
+    } catch (Exception ex) {
+      fail("preHandle should not throw", ex);
+    }
 
     assertThat(MDC.get("request_id")).isEqualTo("req-1");
     assertThat(MDC.get("http_method")).isEqualTo("POST");

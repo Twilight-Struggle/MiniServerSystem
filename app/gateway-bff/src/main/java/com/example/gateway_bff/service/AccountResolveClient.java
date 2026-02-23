@@ -8,6 +8,8 @@ import com.example.gateway_bff.service.dto.AccountIdentityResolveResponse;
 import java.net.SocketTimeoutException;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
@@ -16,6 +18,8 @@ import org.springframework.web.client.RestClientResponseException;
 @Service
 @RequiredArgsConstructor
 public class AccountResolveClient {
+
+  private static final Logger logger = LoggerFactory.getLogger(AccountResolveClient.class);
 
   private final RestClient accountRestClient;
   private final AccountClientProperties properties;
@@ -55,11 +59,16 @@ public class AccountResolveClient {
               .retrieve()
               .body(AccountIdentityResolveResponse.class);
       if (response == null) {
+        logger.warn("account resolveIdentity returned empty body");
         throw new AccountIntegrationException(
             AccountIntegrationException.Reason.INVALID_RESPONSE, "account response is empty");
       }
       return response;
     } catch (RestClientResponseException ex) {
+      logger.warn(
+          "account resolveIdentity failed with http status={} statusText={}",
+          ex.getStatusCode().value(),
+          ex.getStatusText());
       if (ex.getStatusCode().value() == 401) {
         throw new AccountIntegrationException(
             AccountIntegrationException.Reason.UNAUTHORIZED, "account rejected internal auth", ex);
@@ -76,14 +85,17 @@ public class AccountResolveClient {
           AccountIntegrationException.Reason.BAD_GATEWAY, "account request failed", ex);
     } catch (ResourceAccessException ex) {
       if (isTimeout(ex)) {
+        logger.warn("account resolveIdentity timed out");
         throw new AccountIntegrationException(
             AccountIntegrationException.Reason.TIMEOUT, "account request timeout", ex);
       }
+      logger.warn("account resolveIdentity connection failed", ex);
       throw new AccountIntegrationException(
           AccountIntegrationException.Reason.BAD_GATEWAY, "account connection failed", ex);
     } catch (AccountIntegrationException ex) {
       throw ex;
     } catch (RuntimeException ex) {
+      logger.warn("account resolveIdentity response parse failed", ex);
       throw new AccountIntegrationException(
           AccountIntegrationException.Reason.INVALID_RESPONSE, "account response parse failed", ex);
     }
@@ -91,6 +103,7 @@ public class AccountResolveClient {
 
   private AuthenticatedUser toAuthenticatedUser(AccountIdentityResolveResponse response) {
     if (response == null || isBlank(response.userId()) || isBlank(response.accountStatus())) {
+      logger.warn("account resolveIdentity response validation failed");
       throw new AccountIntegrationException(
           AccountIntegrationException.Reason.INVALID_RESPONSE, "account response is invalid");
     }

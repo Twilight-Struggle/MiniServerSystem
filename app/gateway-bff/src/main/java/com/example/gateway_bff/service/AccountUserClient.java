@@ -9,6 +9,8 @@ import com.example.gateway_bff.service.dto.AccountUserResponse;
 import java.net.SocketTimeoutException;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
@@ -17,6 +19,8 @@ import org.springframework.web.client.RestClientResponseException;
 @Service
 @RequiredArgsConstructor
 public class AccountUserClient {
+
+  private static final Logger logger = LoggerFactory.getLogger(AccountUserClient.class);
 
   private final RestClient accountRestClient;
   private final AccountClientProperties properties;
@@ -68,12 +72,13 @@ public class AccountUserClient {
       withRolesHeader(spec, requesterRoles);
       return requireValid(spec.retrieve().body(AccountUserResponse.class));
     } catch (RestClientResponseException ex) {
-      throw mapResponseException(ex);
+      throw mapResponseException(ex, "getUser");
     } catch (ResourceAccessException ex) {
-      throw mapResourceException(ex);
+      throw mapResourceException(ex, "getUser");
     } catch (AccountIntegrationException ex) {
       throw ex;
     } catch (RuntimeException ex) {
+      logger.warn("account getUser response parse failed", ex);
       throw new AccountIntegrationException(
           AccountIntegrationException.Reason.INVALID_RESPONSE, "account response parse failed", ex);
     }
@@ -94,12 +99,13 @@ public class AccountUserClient {
       withRolesHeader(spec, requesterRoles);
       return requireValid(spec.body(request).retrieve().body(AccountUserResponse.class));
     } catch (RestClientResponseException ex) {
-      throw mapResponseException(ex);
+      throw mapResponseException(ex, "patchUser");
     } catch (ResourceAccessException ex) {
-      throw mapResourceException(ex);
+      throw mapResourceException(ex, "patchUser");
     } catch (AccountIntegrationException ex) {
       throw ex;
     } catch (RuntimeException ex) {
+      logger.warn("account patchUser response parse failed", ex);
       throw new AccountIntegrationException(
           AccountIntegrationException.Reason.INVALID_RESPONSE, "account response parse failed", ex);
     }
@@ -120,6 +126,7 @@ public class AccountUserClient {
 
   private AccountUserResponse requireValid(AccountUserResponse response) {
     if (response == null || isBlank(response.userId()) || isBlank(response.status())) {
+      logger.warn("account response validation failed: missing required fields");
       throw new AccountIntegrationException(
           AccountIntegrationException.Reason.INVALID_RESPONSE, "account response is invalid");
     }
@@ -135,7 +142,13 @@ public class AccountUserClient {
         response.roles());
   }
 
-  private AccountIntegrationException mapResponseException(RestClientResponseException ex) {
+  private AccountIntegrationException mapResponseException(
+      RestClientResponseException ex, String operation) {
+    logger.warn(
+        "account {} failed with http status={} statusText={}",
+        operation,
+        ex.getStatusCode().value(),
+        ex.getStatusText());
     if (ex.getStatusCode().value() == 401) {
       return new AccountIntegrationException(
           AccountIntegrationException.Reason.UNAUTHORIZED, "account rejected internal auth", ex);
@@ -156,11 +169,14 @@ public class AccountUserClient {
         AccountIntegrationException.Reason.BAD_GATEWAY, "account request failed", ex);
   }
 
-  private AccountIntegrationException mapResourceException(ResourceAccessException ex) {
+  private AccountIntegrationException mapResourceException(
+      ResourceAccessException ex, String operation) {
     if (isTimeout(ex)) {
+      logger.warn("account {} timed out", operation);
       return new AccountIntegrationException(
           AccountIntegrationException.Reason.TIMEOUT, "account request timeout", ex);
     }
+    logger.warn("account {} connection failed", operation, ex);
     return new AccountIntegrationException(
         AccountIntegrationException.Reason.BAD_GATEWAY, "account connection failed", ex);
   }

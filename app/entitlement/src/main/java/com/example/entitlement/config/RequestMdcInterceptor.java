@@ -18,7 +18,8 @@ public class RequestMdcInterceptor implements HandlerInterceptor {
   private static final String ATTRIBUTE_KEYS = RequestMdcInterceptor.class.getName() + ".MDC_KEYS";
 
   @Override
-  public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+  public boolean preHandle(
+      HttpServletRequest request, HttpServletResponse response, Object handler) {
     final List<String> keys = new ArrayList<>();
     put(keys, "request_id", resolveRequestId(request));
     put(keys, "http_method", request.getMethod());
@@ -32,7 +33,10 @@ public class RequestMdcInterceptor implements HandlerInterceptor {
 
   @Override
   public void afterCompletion(
-      HttpServletRequest request, HttpServletResponse response, Object handler, @Nullable Exception ex) {
+      HttpServletRequest request,
+      HttpServletResponse response,
+      Object handler,
+      @Nullable Exception ex) {
     final Object attribute = request.getAttribute(ATTRIBUTE_KEYS);
     if (!(attribute instanceof List<?> rawKeys)) {
       return;
@@ -69,7 +73,8 @@ public class RequestMdcInterceptor implements HandlerInterceptor {
     if (headerUserId != null && !headerUserId.isBlank()) {
       return headerUserId;
     }
-    final Object variableAttribute = request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
+    final Object variableAttribute =
+        request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
     if (variableAttribute instanceof Map<?, ?> variables) {
       final Object userId = variables.get("user_id");
       if (userId instanceof String userIdString && !userIdString.isBlank()) {

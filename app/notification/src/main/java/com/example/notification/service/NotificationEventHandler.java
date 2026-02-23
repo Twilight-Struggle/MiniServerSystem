@@ -17,12 +17,16 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
 public class NotificationEventHandler {
+
+  private static final Logger logger = LoggerFactory.getLogger(NotificationEventHandler.class);
 
   private final ProcessedEventRepository processedEventRepository;
   private final NotificationRepository notificationRepository;
@@ -37,6 +41,7 @@ public class NotificationEventHandler {
     // processed_events に先行登録して重複処理を抑止する
     final boolean inserted = processedEventRepository.insertIfAbsent(eventId, now);
     if (!inserted) {
+      logger.info("duplicate notification event skipped");
       return;
     }
     final EntitlementEventPayload payload =
@@ -68,6 +73,7 @@ public class NotificationEventHandler {
             now,
             null);
     notificationRepository.insert(record);
+    logger.info("notification event accepted and queued");
   }
 
   private String mapEventType(EntitlementEvent event) {
