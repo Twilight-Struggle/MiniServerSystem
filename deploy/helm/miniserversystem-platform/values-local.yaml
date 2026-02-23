@@ -89,6 +89,10 @@ ingress:
 istio:
   enabled: true
   gatewayToAccountTimeout: 1s
+  gatewayToAccountRetry:
+    attempts: 2
+    perTryTimeout: 300ms
+    retryOn: connect-failure,refused-stream,unavailable,cancelled
   ingress:
     enabled: true
     hosts:

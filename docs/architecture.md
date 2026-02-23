@@ -178,6 +178,7 @@
 - API エラーは `502/504` などへ変換
 - `accountStatus != ACTIVE` は `403 ACCOUNT_INACTIVE`
 - Istio `VirtualService` で `gateway-bff -> account` に timeout（既定 `1s`）を設定し、遅延時に早期失敗させる
+- Istio retry は `GET /users/{userId}` と冪等な `POST /identities:resolve` に限定して適用する
 
 ## 9. デプロイと設定
 
@@ -214,7 +215,7 @@ account 側:
 ## 11. 既知のギャップ
 
 - `/v1/users/{userId}/profile` は現時点で実データ集約未実装（プレースホルダー）
-- gateway-bff → account のリトライ/サーキットブレーカーは未導入（timeout のみ導入済み）
+- gateway-bff → account のサーキットブレーカーは未導入（timeout/retry は導入済み）
 - 内部 API は Istio mTLS(STRICT) + AuthorizationPolicy でゼロトラスト化し、共有トークン方式はアプリレイヤーの追加ガードとして併用する
 
 ## 12. 主要設計判断
