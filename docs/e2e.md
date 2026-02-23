@@ -95,6 +95,44 @@
 担保したいリスク:
 - 水平権限昇格。
 
+### E2E-07: 非 Gateway ワークロードからの内部 API 到達拒否（Istio AuthorizationPolicy）
+
+目的:
+- Gateway 以外のワークロードから account / entitlement / matchmaking への内部到達が拒否されることを確認する。
+
+主な確認内容:
+- テスト用 Pod（gateway 以外 SA）から `account` の非 health パスへアクセスし拒否される。
+- テスト用 Pod から `entitlement` の非外部公開パスへアクセスし拒否される。
+- テスト用 Pod から `matchmaking` へアクセスし拒否される。
+
+担保したいリスク:
+- メッシュ内の横移動による内部 API 直接呼び出し。
+- Gateway 集約前提の認可境界の破壊。
+
+### E2E-08: 外部公開された Entitlement Payment API（grants/revokes）の到達性
+
+目的:
+- Ingress 経由で公開される `POST /v1/entitlements/grants|revokes` が外部から利用可能であることを確認する。
+
+主な確認内容:
+- `POST /v1/entitlements/grants` が `200` を返す。
+- `POST /v1/entitlements/revokes` が `200` を返す。
+
+担保したいリスク:
+- 外部決済連携導線の誤遮断。
+- Istio VirtualService/AuthorizationPolicy 変更時の公開経路回帰。
+
+### E2E-09: 外部非公開 Entitlement API の拒否
+
+目的:
+- 外部からは Payment API 以外の entitlement パスへ到達できないことを確認する。
+
+主な確認内容:
+- `GET /v1/users/{userId}/entitlements` 相当の外部アクセスが拒否される（`200` にならない）。
+
+担保したいリスク:
+- 意図しない API 公開による情報露出や境界破壊。
+
 ## 3. この E2E セットで保証する品質特性
 
 - 可用性前提: テスト開始時点で依存サービスが ready であること。

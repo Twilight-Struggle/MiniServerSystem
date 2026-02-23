@@ -160,6 +160,12 @@
 - 検知: 解析失敗件数増
 - 緩和方針: 恒久失敗扱いで隔離し、契約破壊の発生源を修正
 
+#### FM-NATS-03: JetStream advisory DLQ 取り込み停滞
+- 症状: MaxDeliver/MSG_TERMINATED は発生しているが `notification.notification_nats_dlq` への記録が増えない
+- 影響: 再投入対象（stream_seq）の追跡不能化、復旧判断遅延
+- 検知: advisory 購読ログと `notification.notification_nats_dlq` 件数の乖離
+- 緩和方針: advisory subscriber の稼働、DB 接続、subject/stream/durable 設定を確認する
+
 ### 3.7 Notification（永続化 + 配信）
 
 #### FM-NOTI-01: 同一イベント多重処理
@@ -208,7 +214,7 @@
 - Gateway-BFF SLI-A/B: FM-AUTH-01/02/03, FM-BFF-ACC-01/02/03/04/05
 - Account SLI-A/B/C: FM-ACC-01/02/03/04, FM-DB-01/03
 - Entitlement SLI-C/D/E: FM-OB-01/02/03, FM-DB-01
-- Notification SLI-B/C/D: FM-NATS-01/02, FM-NOTI-01/02/03/04/05, FM-DB-02
+- Notification SLI-B/C/D: FM-NATS-01/02/03, FM-NOTI-01/02/03/04/05, FM-DB-02
 
 ## 6. 参照関係
 
