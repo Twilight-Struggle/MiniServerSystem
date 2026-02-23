@@ -88,6 +88,22 @@ istio:
     attempts: 2
     perTryTimeout: 300ms
     retryOn: connect-failure,refused-stream,unavailable,cancelled
+  gatewayToAccountCircuitBreaker:
+    enabled: true
+    connectionPool:
+      tcp:
+        maxConnections: 100
+        connectTimeout: 1s
+      http:
+        http1MaxPendingRequests: 50
+        maxRequestsPerConnection: 20
+        maxRetries: 3
+    outlierDetection:
+      consecutive5xxErrors: 5
+      interval: 10s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+      minHealthPercent: 0
   ingress:
     enabled: true
     hosts:
