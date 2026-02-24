@@ -26,9 +26,12 @@ import io.nats.client.api.StreamConfiguration;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
@@ -103,8 +106,13 @@ public class EntitlementEventSubscriber {
 
   @VisibleForTesting
   void handleMessage(Message message) {
+    final List<MDC.MDCCloseable> mdcCloseables = new ArrayList<>();
     try {
       final EntitlementEvent event = EntitlementEvent.parseFrom(message.getData());
+      putMdc(mdcCloseables, "event_id", event.getEventId());
+      putMdc(mdcCloseables, "user_id", event.getUserId());
+      putMdc(mdcCloseables, "event_type", event.getEventType().name());
+      putMdc(mdcCloseables, "source_id", event.getSourceId());
       eventHandler.handleEntitlementEvent(event);
       // JetStream 明示 ack: 成功時は ack して再配信を止める
       message.ack();
@@ -124,6 +132,21 @@ public class EntitlementEventSubscriber {
       // 不明な例外はデータロス回避のため再配信に倒す
       logger.warn("failed to handle nats message", ex);
       nakSilently(message);
+    } finally {
+      closeMdc(mdcCloseables);
+    }
+  }
+
+  private void putMdc(List<MDC.MDCCloseable> mdcCloseables, String key, String value) {
+    if (value == null || value.isBlank()) {
+      return;
+    }
+    mdcCloseables.add(MDC.putCloseable(key, value));
+  }
+
+  private void closeMdc(List<MDC.MDCCloseable> mdcCloseables) {
+    for (int i = mdcCloseables.size() - 1; i >= 0; i--) {
+      mdcCloseables.get(i).close();
     }
   }
 

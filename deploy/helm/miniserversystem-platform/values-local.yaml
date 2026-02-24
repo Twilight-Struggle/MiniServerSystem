@@ -4,6 +4,7 @@ global:
 app:
   gateway:
     enabled: true
+    otelEnabled: true
     serviceAccountName: gateway
     image: { repository: gateway-bff, tag: dev }
     port: 8080
@@ -25,6 +26,7 @@ app:
 
   account:
     enabled: true
+    otelEnabled: true
     serviceAccountName: account
     image: { repository: account, tag: dev }
     port: 8080
@@ -40,6 +42,7 @@ app:
 
   entitlement:
     enabled: true
+    otelEnabled: true
     serviceAccountName: entitlement
     image: { repository: entitlement, tag: dev }
     port: 8080
@@ -55,6 +58,7 @@ app:
 
   matchmaking:
     enabled: true
+    otelEnabled: false
     serviceAccountName: matchmaking
     image: { repository: matchmaking, tag: dev }
     port: 8080
@@ -67,6 +71,7 @@ app:
 
   notification:
     enabled: true
+    otelEnabled: true
     serviceAccountName: notification
     strategy: Recreate
     image: { repository: notification, tag: dev }
@@ -125,3 +130,19 @@ istio:
     paths:
       - /v1/entitlements/grants
       - /v1/entitlements/revokes
+
+otel:
+  enabled: true
+  javaAgent:
+    # Java agent JAR を Pod 起動時にダウンロードする URL
+    jarDownloadUrl: https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v2.20.1/opentelemetry-javaagent.jar
+    mountPath: /otel
+    jarName: opentelemetry-javaagent.jar
+  sdk:
+    otlpEndpoint: http://otel-collector:4317
+    tracesExporter: otlp
+    metricsExporter: none
+    logsExporter: none
+    tracesSampler: parentbased_traceidratio
+    tracesSamplerArg: "0.1"
+    propagation: tracecontext,baggage

@@ -73,6 +73,8 @@ class EntitlementOutboxPublisherTest {
 
   @Mock private OutboxEventRepository outboxEventRepository;
 
+  @Mock private EntitlementMetrics metrics;
+
   private ObjectMapper objectMapper;
   private EntitlementOutboxPublisher publisher;
 
@@ -83,7 +85,13 @@ class EntitlementOutboxPublisherTest {
     objectMapper = new ObjectMapper();
     publisher =
         new EntitlementOutboxPublisher(
-            jetStream, outboxEventRepository, PROPERTIES, NATS_PROPERTIES, objectMapper, clock);
+            jetStream,
+            outboxEventRepository,
+            PROPERTIES,
+            NATS_PROPERTIES,
+            objectMapper,
+            metrics,
+            clock);
   }
 
   @Test

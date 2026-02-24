@@ -26,6 +26,20 @@ spec:
       {{- end }}
     spec:
       serviceAccountName: {{ default $name $svc.serviceAccountName }}
+      {{- if and $.Values.otel.enabled $svc.otelEnabled }}
+      initContainers:
+        - name: otel-javaagent-init
+          image: curlimages/curl:8.12.1
+          command:
+            - sh
+            - -c
+            - >
+              set -eu;
+              curl -fsSL "{{ $.Values.otel.javaAgent.jarDownloadUrl }}" -o "{{ $.Values.otel.javaAgent.mountPath }}/{{ $.Values.otel.javaAgent.jarName }}"
+          volumeMounts:
+            - name: otel-javaagent
+              mountPath: {{ $.Values.otel.javaAgent.mountPath }}
+      {{- end }}
       containers:
         - name: {{ $name }}
           image: "{{ $svc.image.repository }}:{{ $svc.image.tag }}"
@@ -37,6 +51,31 @@ spec:
             - name: {{ $k }}
               value: "{{ $v }}"
             {{- end }}
+            {{- if and $.Values.otel.enabled $svc.otelEnabled }}
+            - name: OTEL_SERVICE_NAME
+              value: {{ $name | quote }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ $.Values.otel.sdk.otlpEndpoint | quote }}
+            - name: OTEL_TRACES_EXPORTER
+              value: {{ $.Values.otel.sdk.tracesExporter | quote }}
+            - name: OTEL_METRICS_EXPORTER
+              value: {{ $.Values.otel.sdk.metricsExporter | quote }}
+            - name: OTEL_LOGS_EXPORTER
+              value: {{ $.Values.otel.sdk.logsExporter | quote }}
+            - name: OTEL_TRACES_SAMPLER
+              value: {{ $.Values.otel.sdk.tracesSampler | quote }}
+            - name: OTEL_TRACES_SAMPLER_ARG
+              value: {{ $.Values.otel.sdk.tracesSamplerArg | quote }}
+            - name: OTEL_PROPAGATORS
+              value: {{ $.Values.otel.sdk.propagation | quote }}
+            - name: JAVA_TOOL_OPTIONS
+              value: "-javaagent:{{ $.Values.otel.javaAgent.mountPath }}/{{ $.Values.otel.javaAgent.jarName }}"
+            {{- end }}
+          {{- if and $.Values.otel.enabled $svc.otelEnabled }}
+          volumeMounts:
+            - name: otel-javaagent
+              mountPath: {{ $.Values.otel.javaAgent.mountPath }}
+          {{- end }}
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness
@@ -49,6 +88,11 @@ spec:
               port: {{ $svc.port }}
             initialDelaySeconds: 15
             periodSeconds: 10
+      {{- if and $.Values.otel.enabled $svc.otelEnabled }}
+      volumes:
+        - name: otel-javaagent
+          emptyDir: {}
+      {{- end }}
 ---
 {{- end }}
 {{- end }}

@@ -166,6 +166,13 @@ public class OutboxEventRepository {
     return jdbcTemplate.update(sql, params);
   }
 
+  public int countFailed() {
+    final String sql = "SELECT COUNT(*) FROM outbox_events WHERE status = 'FAILED'";
+    final Integer count =
+        jdbcTemplate.queryForObject(sql, new MapSqlParameterSource(), Integer.class);
+    return count == null ? 0 : count;
+  }
+
   private OutboxEventRecord mapRow(ResultSet rs, int rowNum) throws SQLException {
     return new OutboxEventRecord(
         UUID.fromString(rs.getString("event_id")),

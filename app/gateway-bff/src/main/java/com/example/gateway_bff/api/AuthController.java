@@ -2,6 +2,7 @@ package com.example.gateway_bff.api;
 
 import com.example.gateway_bff.api.response.MeResponse;
 import com.example.gateway_bff.model.AuthenticatedUser;
+import com.example.gateway_bff.service.GatewayMetrics;
 import com.example.gateway_bff.service.OidcAuthenticatedUserService;
 import java.net.URI;
 import lombok.RequiredArgsConstructor;
@@ -19,12 +20,15 @@ public class AuthController {
 
   private static final URI OIDC_AUTHORIZATION_URI = URI.create("/oauth2/authorization/keycloak");
   private final OidcAuthenticatedUserService oidcAuthenticatedUserService;
+  private final GatewayMetrics gatewayMetrics;
 
   @GetMapping("/login")
   public ResponseEntity<Void> login(@RequestParam(name = "error", required = false) String error) {
     if (error != null) {
+      gatewayMetrics.recordLoginResult("error");
       return ResponseEntity.status(401).build();
     }
+    gatewayMetrics.recordLoginResult("redirect");
     return ResponseEntity.status(302).location(OIDC_AUTHORIZATION_URI).build();
   }
 

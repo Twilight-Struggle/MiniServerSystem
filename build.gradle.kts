@@ -24,6 +24,7 @@ extra.apply {
     set("lombokVersion", "1.18.42")
     set("testcontainersBomVersion", "1.21.4")
     set("protobufVersion", "3.25.5")
+    set("logstashLogbackEncoderVersion", "8.1")
 }
 
 allprojects {

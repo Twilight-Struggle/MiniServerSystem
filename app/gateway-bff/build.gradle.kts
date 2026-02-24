@@ -5,14 +5,20 @@ plugins {
 }
 
 val lombokVersion: String by rootProject.extra
+val logstashLogbackEncoderVersion: String by rootProject.extra
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("io.micrometer:micrometer-registry-prometheus")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
+    implementation("net.logstash.logback:logstash-logback-encoder:$logstashLogbackEncoderVersion")
     implementation(project(":libs:common"))
+    spotbugs("com.github.spotbugs:spotbugs:4.9.7")
+    spotbugs("com.github.spotbugs:spotbugs-annotations:4.9.7")
+    compileOnly("com.github.spotbugs:spotbugs-annotations:4.9.7")
     compileOnly("org.projectlombok:lombok:$lombokVersion")
     annotationProcessor("org.projectlombok:lombok:$lombokVersion")
 

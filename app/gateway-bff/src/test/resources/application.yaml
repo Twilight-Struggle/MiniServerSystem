@@ -17,3 +17,15 @@ spring:
             jwk-set-uri: http://localhost/jwks
             user-info-uri: http://localhost/userinfo
             user-name-attribute: sub
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include:
+          - health
+          - info
+          - prometheus
+  endpoint:
+    prometheus:
+      access: unrestricted

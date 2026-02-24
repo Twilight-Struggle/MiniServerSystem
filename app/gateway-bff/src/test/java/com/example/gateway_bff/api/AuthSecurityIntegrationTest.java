@@ -93,4 +93,11 @@ class AuthSecurityIntegrationTest {
         mockMvc.perform(get("/actuator/health/readiness")).andReturn().getResponse().getStatus();
     assertThat(statusCode).isNotEqualTo(401);
   }
+
+  @Test
+  void actuatorPrometheusIsAccessibleWithoutAuthentication() throws Exception {
+    final int statusCode =
+        mockMvc.perform(get("/actuator/prometheus")).andReturn().getResponse().getStatus();
+    assertThat(statusCode).isNotEqualTo(401);
+  }
 }

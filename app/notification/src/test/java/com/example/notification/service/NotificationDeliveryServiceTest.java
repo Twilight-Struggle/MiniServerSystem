@@ -61,6 +61,7 @@ class NotificationDeliveryServiceTest {
   @Mock private NotificationDlqRepository notificationDlqRepository;
 
   @Mock private NotificationSender sender;
+  @Mock private NotificationMetrics metrics;
 
   private NotificationDeliveryService service;
 
@@ -75,6 +76,7 @@ class NotificationDeliveryServiceTest {
             notificationDlqRepository,
             sender,
             PROPERTIES,
+            metrics,
             clock,
             transactionManager);
   }
@@ -206,6 +208,7 @@ class NotificationDeliveryServiceTest {
             notificationDlqRepository,
             sender,
             PROPERTIES,
+            metrics,
             Clock.fixed(FIXED_NOW, ZoneOffset.UTC),
             transactionManager,
             nullTemplate);
@@ -308,6 +311,7 @@ class NotificationDeliveryServiceTest {
         NotificationDlqRepository notificationDlqRepository,
         NotificationSender sender,
         NotificationDeliveryProperties properties,
+        NotificationMetrics metrics,
         Clock clock,
         PlatformTransactionManager transactionManager,
         TransactionTemplate transactionTemplate) {
@@ -316,6 +320,7 @@ class NotificationDeliveryServiceTest {
           notificationDlqRepository,
           sender,
           properties,
+          metrics,
           clock,
           transactionManager);
       this.transactionTemplate = transactionTemplate;

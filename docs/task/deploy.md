@@ -116,6 +116,31 @@ make dev
 3. `test / test` でログイン
 4. 認証後に `GET http://localhost:18080/v1/me` が 200 でユーザー情報を返すことを確認
 
+### 4.1 ローカルトレース確認（Jaeger）
+- local overlay では `jaeger`（all-in-one）と `otel-collector` が起動する
+- アプリは `OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317` へ送信し、collector が `jaeger:4317` へ転送する
+- Jaeger UI 確認手順:
+```bash
+kubectl -n miniserversystem port-forward svc/jaeger 16686:16686
+```
+ブラウザで `http://localhost:16686` を開く
+
+### 4.2 ローカルメトリクス確認（Prometheus/Grafana）
+- local overlay では `prometheus` と `grafana` が起動する
+- Prometheus は `gateway/account/entitlement/matchmaking/notification` の `/actuator/prometheus` を scrape する
+- 各アプリは `health/info/prometheus` を actuator 公開し、`application` タグと `http.server.requests` ヒストグラムを出力する
+- Istio `STRICT mTLS` 下で scrape するため、`prometheus` は sidecar 注入を有効化し、`/actuator/prometheus` のみ AuthorizationPolicy で許可する
+- Prometheus UI 確認手順:
+```bash
+kubectl -n miniserversystem port-forward svc/prometheus 9090:9090
+```
+ブラウザで `http://localhost:9090` を開く
+- Grafana UI 確認手順:
+```bash
+kubectl -n miniserversystem port-forward svc/grafana 3000:3000
+```
+ブラウザで `http://localhost:3000` を開く（初期ログイン: `admin/admin`）
+
 ### 5. OIDC疎通確認(切り分け用)
 以下が 200 で返ることを確認する:
 - `http://keycloak.localhost/realms/miniserversystem/.well-known/openid-configuration`

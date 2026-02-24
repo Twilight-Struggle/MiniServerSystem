@@ -12,6 +12,7 @@ import com.example.gateway_bff.api.response.UserResponse;
 import com.example.gateway_bff.model.AuthenticatedUser;
 import com.example.gateway_bff.service.AccountIntegrationException;
 import com.example.gateway_bff.service.AccountUserClient;
+import com.example.gateway_bff.service.GatewayMetrics;
 import com.example.gateway_bff.service.OidcAuthenticatedUserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
@@ -34,6 +35,7 @@ class UserControllerTest {
 
   @MockitoBean private OidcAuthenticatedUserService oidcAuthenticatedUserService;
   @MockitoBean private AccountUserClient accountUserClient;
+  @MockitoBean private GatewayMetrics gatewayMetrics;
 
   @Test
   void getUserReturns200() throws Exception {

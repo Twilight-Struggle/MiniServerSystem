@@ -1,5 +1,6 @@
 package com.example.gateway_bff.api;
 
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -8,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.gateway_bff.model.AuthenticatedUser;
 import com.example.gateway_bff.service.AccountInactiveException;
+import com.example.gateway_bff.service.GatewayMetrics;
 import com.example.gateway_bff.service.OidcAuthenticatedUserService;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -26,6 +28,7 @@ class AuthControllerTest {
   @Autowired private MockMvc mockMvc;
 
   @MockitoBean private OidcAuthenticatedUserService oidcAuthenticatedUserService;
+  @MockitoBean private GatewayMetrics gatewayMetrics;
 
   @Test
   void loginReturns302ToAuthorizationEndpoint() throws Exception {
@@ -33,11 +36,13 @@ class AuthControllerTest {
         .perform(get("/login"))
         .andExpect(status().isFound())
         .andExpect(header().string("Location", "/oauth2/authorization/keycloak"));
+    verify(gatewayMetrics).recordLoginResult("redirect");
   }
 
   @Test
   void loginWithErrorReturns401WithoutRedirect() throws Exception {
     mockMvc.perform(get("/login").param("error", "true")).andExpect(status().isUnauthorized());
+    verify(gatewayMetrics).recordLoginResult("error");
   }
 
   @Test

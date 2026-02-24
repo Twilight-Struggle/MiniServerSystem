@@ -38,6 +38,7 @@ public class NotificationDeliveryService {
   private final NotificationDlqRepository notificationDlqRepository;
   private final NotificationSender sender;
   private final NotificationDeliveryProperties properties;
+  private final NotificationMetrics metrics;
   private final Clock clock;
   private final PlatformTransactionManager transactionManager;
 
@@ -58,6 +59,9 @@ public class NotificationDeliveryService {
               "notification sent but lock was lost id={} eventId={}",
               record.notificationId(),
               record.eventId());
+        } else {
+          metrics.recordDeliveryResult("sent");
+          metrics.recordDeliveryE2eDelay(record.occurredAt(), now);
         }
       } catch (DataAccessException ex) {
         handleFailure(record, ex, now, lockedBy);
@@ -65,6 +69,7 @@ public class NotificationDeliveryService {
         handleFailure(record, ex, now, lockedBy);
       }
     }
+    metrics.updateBacklogCurrent(notificationRepository.countBacklog(now));
   }
 
   @VisibleForTesting
@@ -79,6 +84,8 @@ public class NotificationDeliveryService {
             record.eventId());
         return;
       }
+      metrics.recordDeliveryResult("failed");
+      metrics.recordDlqMoved();
       logger.warn(
           "notification moved to DLQ id={} eventId={}",
           record.notificationId(),
@@ -96,6 +103,8 @@ public class NotificationDeliveryService {
           "notification retry skipped because lock was lost id={} attempt={}",
           record.notificationId(),
           nextAttempt);
+    } else {
+      metrics.recordDeliveryResult("retry_scheduled");
     }
     logger.warn(
         "notification retry scheduled id={} attempt={}", record.notificationId(), nextAttempt, ex);

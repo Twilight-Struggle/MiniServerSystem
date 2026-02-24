@@ -149,6 +149,26 @@ class NotificationEventHandlerTest {
     verify(notificationRepository, never()).insert(any(NotificationRecord.class));
   }
 
+  @Test
+  void storeUnrecognizedEventTypeAsFallbackType() throws JsonProcessingException {
+    final EntitlementEvent event =
+        buildEvent(EntitlementEvent.EventType.ENTITLEMENT_GRANTED).toBuilder()
+            .setEventTypeValue(99)
+            .build();
+    final UUID eventId = UUID.fromString(EVENT_ID);
+    when(processedEventRepository.insertIfAbsent(eventId, FIXED_NOW)).thenReturn(true);
+    doReturn(PAYLOAD_JSON)
+        .when(objectMapper)
+        .writeValueAsString(any(EntitlementEventPayload.class));
+
+    handler.handleEntitlementEvent(event);
+
+    verify(notificationRepository).insert(recordCaptor.capture());
+    verify(objectMapper).writeValueAsString(payloadCaptor.capture());
+    assertThat(payloadCaptor.getValue().eventType()).isEqualTo("Unrecognized");
+    assertThat(recordCaptor.getValue().type()).isEqualTo("Unrecognized");
+  }
+
   private EntitlementEvent buildEvent(EntitlementEvent.EventType eventType) {
     // テスト用のイベントを固定値で構築し、揺れない入力を提供する
     return EntitlementEvent.newBuilder()

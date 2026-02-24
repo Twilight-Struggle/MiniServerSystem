@@ -56,6 +56,7 @@ public class EntitlementOutboxPublisher {
   private final EntitlementOutboxProperties properties;
   private final EntitlementNatsProperties natsProperties;
   private final ObjectMapper objectMapper;
+  private final EntitlementMetrics metrics;
   private final Clock clock;
 
   public void publishPendingBatch() {
@@ -67,6 +68,7 @@ public class EntitlementOutboxPublisher {
     for (OutboxEventRecord record : pending) {
       try {
         final EntitlementEventPayload payload = parsePayload(record);
+        metrics.recordOutboxBacklogAge(Instant.parse(payload.occurredAt()), now);
         final EntitlementEvent event = buildEvent(record, payload);
         final Headers headers = buildHeaders(record, payload);
         final PublishAck ack = publishWithAck(headers, event);
@@ -76,6 +78,8 @@ public class EntitlementOutboxPublisher {
         final int updated = outboxEventRepository.markPublished(record.eventId(), lockedBy, now);
         if (updated == 0) {
           logger.warn("outbox publish succeeded but lock was lost eventId={}", record.eventId());
+        } else {
+          metrics.recordOutboxPublishDelay(Instant.parse(payload.occurredAt()), now);
         }
       } catch (JetStreamApiException | IOException ex) {
         handleFailure(record, ex, now, lockedBy);
@@ -85,6 +89,7 @@ public class EntitlementOutboxPublisher {
         handleFailure(record, ex, now, lockedBy);
       }
     }
+    metrics.updateOutboxFailedCurrent(outboxEventRepository.countFailed());
   }
 
   private EntitlementEventPayload parsePayload(OutboxEventRecord record) {
