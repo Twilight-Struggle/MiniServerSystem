@@ -5,6 +5,7 @@ import com.example.notification.service.MatchmakingEventHandler;
 import com.example.notification.service.NotificationEventPermanentException;
 import com.example.proto.matchmaking.MatchmakingEvent;
 import com.google.protobuf.InvalidProtocolBufferException;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.nats.client.Connection;
 import io.nats.client.Dispatcher;
 import io.nats.client.JetStream;
@@ -34,7 +35,11 @@ public class MatchmakingEventSubscriber {
   private static final int STREAM_NOT_FOUND_ERROR = 404;
   private static final int STREAM_NOT_FOUND_API_ERROR = 10059;
 
+  @SuppressFBWarnings(
+      value = "EI_EXPOSE_REP2",
+      justification = "NATS Connection は外部管理の共有リソースで、防御的コピーが不可能なため")
   private final Connection connection;
+
   private final MatchmakingEventHandler eventHandler;
   private final NotificationMatchmakingNatsProperties properties;
   private final AtomicBoolean started;

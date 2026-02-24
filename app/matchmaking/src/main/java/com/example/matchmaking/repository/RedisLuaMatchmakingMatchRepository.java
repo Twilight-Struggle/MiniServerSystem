@@ -3,6 +3,7 @@ package com.example.matchmaking.repository;
 import com.example.matchmaking.model.MatchMode;
 import com.example.matchmaking.model.MatchPair;
 import com.example.matchmaking.model.TicketStatus;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,6 +21,9 @@ public class RedisLuaMatchmakingMatchRepository implements MatchmakingMatchRepos
   private static final String FIELD_EXPIRES_AT = "expires_at";
   private static final String FIELD_MATCH_ID = "match_id";
 
+  @SuppressFBWarnings(
+      value = "EI_EXPOSE_REP2",
+      justification = "StringRedisTemplate は Spring 管理の共有コンポーネントで防御的コピーが不可能なため")
   private final StringRedisTemplate redisTemplate;
 
   public RedisLuaMatchmakingMatchRepository(StringRedisTemplate redisTemplate) {

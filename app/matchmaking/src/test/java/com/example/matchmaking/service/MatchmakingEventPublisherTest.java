@@ -10,6 +10,7 @@ import com.example.matchmaking.config.MatchmakingNatsProperties;
 import com.example.matchmaking.model.MatchMode;
 import com.example.matchmaking.model.MatchPair;
 import io.nats.client.JetStream;
+import io.nats.client.JetStreamApiException;
 import io.nats.client.impl.Headers;
 import java.io.IOException;
 import java.time.Clock;
@@ -22,7 +23,7 @@ import org.mockito.Mockito;
 class MatchmakingEventPublisherTest {
 
   @Test
-  void publishesMatchedEvent() throws Exception {
+  void publishesMatchedEvent() throws IOException, JetStreamApiException {
     final JetStream jetStream = Mockito.mock(JetStream.class);
     final MatchmakingNatsProperties properties =
         new MatchmakingNatsProperties(
@@ -56,7 +57,7 @@ class MatchmakingEventPublisherTest {
   }
 
   @Test
-  void wrapsIOException() throws Exception {
+  void wrapsIOException() throws IOException, JetStreamApiException {
     final JetStream jetStream = Mockito.mock(JetStream.class);
     when(jetStream.publish(any(String.class), any(Headers.class), any(byte[].class)))
         .thenThrow(new IOException("boom"));

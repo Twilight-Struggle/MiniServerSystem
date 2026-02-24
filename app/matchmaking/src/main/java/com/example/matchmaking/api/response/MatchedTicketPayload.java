@@ -7,9 +7,11 @@ package com.example.matchmaking.api.response;
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Map;
 
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+@SuppressFBWarnings(value = "EI_EXPOSE_REP", justification = "API DTO record はレスポンス整形用途のため")
 public record MatchedTicketPayload(
     String matchId, List<String> peerUserIds, Map<String, Object> session) {}

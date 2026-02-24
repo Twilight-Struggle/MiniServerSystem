@@ -1,5 +1,6 @@
 package com.example.matchmaking.service;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -12,6 +13,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.springframework.stereotype.Component;
 
 @Component
+@SuppressFBWarnings(
+    value = "EI_EXPOSE_REP2",
+    justification = "MeterRegistry は Spring 管理の共有コンポーネントで防御的コピーが不可能なため")
 public class MatchmakingMetrics {
 
   private final MeterRegistry meterRegistry;

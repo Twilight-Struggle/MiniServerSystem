@@ -3,6 +3,7 @@ package com.example.matchmaking.repository;
 import com.example.matchmaking.model.MatchMode;
 import com.example.matchmaking.model.TicketRecord;
 import com.example.matchmaking.model.TicketStatus;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
@@ -25,6 +26,9 @@ public class RedisMatchmakingTicketRepository implements MatchmakingTicketReposi
   private static final String FIELD_ATTRIBUTES = "attributes";
   private static final String FIELD_MATCH_ID = "match_id";
 
+  @SuppressFBWarnings(
+      value = "EI_EXPOSE_REP2",
+      justification = "StringRedisTemplate は Spring 管理の共有コンポーネントで防御的コピーが不可能なため")
   private final StringRedisTemplate redisTemplate;
 
   public RedisMatchmakingTicketRepository(StringRedisTemplate redisTemplate) {
@@ -81,7 +85,7 @@ public class RedisMatchmakingTicketRepository implements MatchmakingTicketReposi
   @Override
   public Optional<TicketRecord> findTicketById(String ticketId) {
     final Map<Object, Object> raw = redisTemplate.opsForHash().entries(ticketKey(ticketId));
-    if (raw == null || raw.isEmpty()) {
+    if (raw.isEmpty()) {
       return Optional.empty();
     }
     final Map<String, String> fields = normalizeFields(raw);
@@ -143,10 +147,11 @@ public class RedisMatchmakingTicketRepository implements MatchmakingTicketReposi
       return Optional.empty();
     }
     final ZSetOperations.TypedTuple<String> first = values.iterator().next();
-    if (first.getScore() == null) {
+    final Double score = first.getScore();
+    if (score == null) {
       return Optional.empty();
     }
-    final long ageMillis = Math.max(0, Instant.now().toEpochMilli() - first.getScore().longValue());
+    final long ageMillis = Math.max(0, Instant.now().toEpochMilli() - score.longValue());
     return Optional.of(ageMillis / 1000);
   }
 

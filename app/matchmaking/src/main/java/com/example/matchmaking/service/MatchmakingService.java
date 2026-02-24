@@ -15,6 +15,7 @@ import com.example.matchmaking.model.TicketStatus;
 import com.example.matchmaking.repository.MatchmakingTicketRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,10 @@ public class MatchmakingService {
 
   private final MatchmakingTicketRepository ticketRepository;
   private final MatchmakingProperties properties;
+
+  @SuppressFBWarnings(
+      value = "EI_EXPOSE_REP2",
+      justification = "ObjectMapper は Spring 管理の共有コンポーネントで防御的コピーが不可能なため")
   private final ObjectMapper objectMapper;
 
   public MatchmakingService(

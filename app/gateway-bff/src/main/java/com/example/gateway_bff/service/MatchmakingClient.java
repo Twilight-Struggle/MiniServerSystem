@@ -5,6 +5,7 @@ import com.example.gateway_bff.service.dto.MatchmakingCancelTicketResponse;
 import com.example.gateway_bff.service.dto.MatchmakingJoinTicketRequest;
 import com.example.gateway_bff.service.dto.MatchmakingJoinTicketResponse;
 import com.example.gateway_bff.service.dto.MatchmakingTicketStatusResponse;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.net.SocketTimeoutException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,7 +19,11 @@ public class MatchmakingClient {
 
   private static final Logger logger = LoggerFactory.getLogger(MatchmakingClient.class);
 
+  @SuppressFBWarnings(
+      value = "EI_EXPOSE_REP2",
+      justification = "RestClient は Spring 管理の共有コンポーネントで防御的コピーが不可能なため")
   private final RestClient matchmakingRestClient;
+
   private final MatchmakingClientProperties properties;
 
   public MatchmakingClient(
