@@ -1,0 +1,20 @@
+# Where: deploy/argocd/project.yaml
+# What: Argo CD AppProject for the monorepo deployment scope.
+# Why: Restrict source repo and destination namespaces explicitly for safer GitOps operation.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: miniserversystem
+  namespace: argocd
+spec:
+  description: Monorepo project for MiniServerSystem app-of-app deployment
+  sourceRepos:
+    - https://github.com/Twilight-Struggle/MiniServerSystem.git
+  destinations:
+    - namespace: argocd
+      server: https://kubernetes.default.svc
+    - namespace: miniserversystem
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"

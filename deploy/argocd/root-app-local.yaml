@@ -1,0 +1,21 @@
+# Where: deploy/argocd/root-app-local.yaml
+# What: Root Application for app-of-app on local environment.
+# Why: Bootstrap child applications from a single entrypoint to demonstrate immediate deployability.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: miniserversystem-root-local
+  namespace: argocd
+spec:
+  project: miniserversystem
+  source:
+    repoURL: https://github.com/Twilight-Struggle/MiniServerSystem.git
+    targetRevision: main
+    path: deploy/argocd/apps
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
