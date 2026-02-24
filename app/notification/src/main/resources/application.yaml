@@ -60,6 +60,14 @@ notification:
       stream: notification-terminated-advisory-dlq
       durable: notification-terminated-advisory-consumer
 
+  matchmaking-nats:
+    subject: matchmaking.events
+    stream: matchmaking-events
+    durable: notification-matchmaking-consumer
+    duplicate-window: 2m
+    ack-wait: 10s
+    max-deliver: 10
+
 management:
   endpoints:
     web:

@@ -1,0 +1,20 @@
+-- どこで: Matchmaking Redis Lua スクリプト
+-- 何を: queue から2件を選び ticket 状態を MATCHED へ更新する原子処理を行う
+-- なぜ: pop/update/remove の分離による競合不整合を防ぐため
+--
+-- 想定 I/F（実装時に確定）:
+-- KEYS[1] = mm:queue:{mode}
+-- ARGV[1] = matched_at epoch millis
+-- ARGV[2] = generated match_id
+--
+-- 戻り値:
+-- 成立時: {"matched", ticket_id_1, ticket_id_2, match_id}
+-- 不成立時: {"no_match"}
+--
+-- TODO:
+-- 1) 先頭2件候補を取得
+-- 2) 各 ticket hash が存在し status=QUEUED か検証
+-- 3) 期限切れ/stale ticket は queue から除去
+-- 4) 2件揃った場合のみ MATCHED + match_id を更新し queue から削除
+-- 5) cancel 優先ルールに従い、CANCELLED を見つけたらマッチ対象から除外
+return {"no_match"}

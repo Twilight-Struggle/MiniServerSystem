@@ -1,0 +1,37 @@
+/*
+ * どこで: Matchmaking インフラ設定
+ * 何を: NATS Connection と JetStream を Bean 化する
+ * なぜ: Match成立イベント publish で再利用するため
+ */
+package com.example.matchmaking.config;
+
+import io.nats.client.Connection;
+import io.nats.client.JetStream;
+import io.nats.client.Nats;
+import io.nats.client.Options;
+import java.io.IOException;
+import java.time.Duration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+@ConditionalOnProperty(name = "nats.enabled", havingValue = "true", matchIfMissing = true)
+public class NatsConfig {
+
+  @Bean(destroyMethod = "close")
+  public Connection natsConnection(NatsProperties properties)
+      throws IOException, InterruptedException {
+    final Options options =
+        new Options.Builder()
+            .server(properties.url())
+            .connectionTimeout(Duration.ofSeconds(properties.connectionTimeout()))
+            .build();
+    return Nats.connect(options);
+  }
+
+  @Bean
+  public JetStream jetStream(Connection connection) throws IOException {
+    return connection.jetStream();
+  }
+}

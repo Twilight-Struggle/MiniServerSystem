@@ -1,0 +1,5 @@
+nats:
+  enabled: false
+
+matchmaking:
+  worker-enabled: false
