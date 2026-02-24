@@ -1,0 +1,25 @@
+# Where: deploy/argocd/apps/infra-local.yaml
+# What: Child Application that deploys infra resources via kustomize overlay(local).
+# Why: Separate infra lifecycle and ensure deterministic order before platform workload rollout.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: miniserversystem-infra-local
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: miniserversystem
+  source:
+    repoURL: https://github.com/Twilight-Struggle/MiniServerSystem.git
+    targetRevision: main
+    path: deploy/kustomize/infra/overlays/local
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: miniserversystem
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

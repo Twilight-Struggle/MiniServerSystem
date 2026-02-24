@@ -162,3 +162,44 @@ kubectl -n miniserversystem port-forward svc/grafana 3000:3000
   - OIDC ログイン後に `GET /v1/me` で `myUserId` を取得できること
   - `GET /v1/users/{myUserId}` が `200` を返し、レスポンス `userId` が `myUserId` と一致すること
   - `GET /v1/users/{otherUserId}` が `403`で拒否されること
+
+## Argo CD app-of-app（モノレポ構成）
+### 目的
+- 本リポジトリ単体で「すぐデプロイ可能」な状態を示す
+- 通常の分離（アプリrepo / Argo CD repo）ではなく、ポートフォリオ用途として monorepo で完結させる
+
+### 構成
+- `deploy/argocd/project.yaml`
+  - `AppProject`。対象repoとデプロイ先namespaceを明示的に制限する
+- `deploy/argocd/root-app-local.yaml`
+  - 親Application。`deploy/argocd/apps` を監視して子Applicationを一括管理する
+- `deploy/argocd/apps/infra-local.yaml`
+  - 子Application(Infra)。`deploy/kustomize/infra/overlays/local` を適用する
+- `deploy/argocd/apps/platform-local.yaml`
+  - 子Application(App)。`deploy/helm/miniserversystem-platform` + `values-local.yaml` を適用する
+
+### 同期順序（重要）
+- `infra-local`: `sync-wave: "0"`
+- `platform-local`: `sync-wave: "1"`
+
+infra（DB/NATS/Keycloakなど）を先に整え、その後にplatform（各アプリ）を同期する。
+
+### 適用手順
+```bash
+kubectl apply -f deploy/argocd/project.yaml
+kubectl apply -f deploy/argocd/root-app-local.yaml
+```
+
+Argo CD UI/CLI で `miniserversystem-root-local` を同期すると、子Applicationが連鎖的に同期される。
+
+### 確認コマンド
+```bash
+kubectl -n argocd get applications
+kubectl -n argocd get app miniserversystem-root-local
+kubectl -n argocd get app miniserversystem-infra-local
+kubectl -n argocd get app miniserversystem-platform-local
+```
+
+### 補足
+- `targetRevision` は `main` 固定。PRプレビュー用途ではブランチ名に変更して運用できる
+- `repoURL` は HTTPS を使用しているため、公開repoであれば追加の鍵登録なしで同期できる

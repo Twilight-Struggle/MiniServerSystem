@@ -1,0 +1,28 @@
+# Where: deploy/argocd/apps/platform-local.yaml
+# What: Child Application that deploys application workloads via Helm(local values).
+# Why: Keep app rollout independent while preserving app-of-app orchestration in the same monorepo.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: miniserversystem-platform-local
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: miniserversystem
+  source:
+    repoURL: https://github.com/Twilight-Struggle/MiniServerSystem.git
+    targetRevision: main
+    path: deploy/helm/miniserversystem-platform
+    helm:
+      valueFiles:
+        - values-local.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: miniserversystem
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
