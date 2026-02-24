@@ -1,8 +1,3 @@
-/*
- * どこで: Matchmaking API
- * 何を: 例外を HTTP ステータスへ変換する
- * なぜ: エラー契約を一元化するため
- */
 package com.example.matchmaking.api;
 
 import org.springframework.http.HttpStatus;
@@ -15,7 +10,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class ApiExceptionHandler {
 
   @ExceptionHandler(InvalidMatchmakingRequestException.class)
-  public ResponseEntity<ApiErrorResponse> handleInvalidRequest(InvalidMatchmakingRequestException ex) {
+  public ResponseEntity<ApiErrorResponse> handleInvalidRequest(
+      InvalidMatchmakingRequestException ex) {
     return ResponseEntity.status(HttpStatus.BAD_REQUEST)
         .body(new ApiErrorResponse("MATCHMAKING_BAD_REQUEST", ex.getMessage()));
   }
@@ -30,6 +26,12 @@ public class ApiExceptionHandler {
   public ResponseEntity<ApiErrorResponse> handleNotFound(TicketNotFoundException ex) {
     return ResponseEntity.status(HttpStatus.NOT_FOUND)
         .body(new ApiErrorResponse("MATCHMAKING_TICKET_NOT_FOUND", ex.getMessage()));
+  }
+
+  @ExceptionHandler(TicketAccessDeniedException.class)
+  public ResponseEntity<ApiErrorResponse> handleAccessDenied(TicketAccessDeniedException ex) {
+    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+        .body(new ApiErrorResponse("MATCHMAKING_TICKET_FORBIDDEN", ex.getMessage()));
   }
 
   @ExceptionHandler(RuntimeException.class)

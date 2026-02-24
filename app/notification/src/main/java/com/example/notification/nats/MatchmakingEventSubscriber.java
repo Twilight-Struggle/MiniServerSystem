@@ -1,12 +1,8 @@
-/*
- * どこで: Notification NATS 購読
- * 何を: matchmaking イベントを購読してハンドラへ渡す
- * なぜ: マッチ成立通知を非同期で取り込むため
- */
 package com.example.notification.nats;
 
 import com.example.notification.config.NotificationMatchmakingNatsProperties;
 import com.example.notification.service.MatchmakingEventHandler;
+import com.example.notification.service.NotificationEventPermanentException;
 import com.example.proto.matchmaking.MatchmakingEvent;
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.nats.client.Connection;
@@ -27,6 +23,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -54,11 +51,6 @@ public class MatchmakingEventSubscriber {
     this.started = new AtomicBoolean(false);
   }
 
-  /**
-   * 役割: subscriber を起動する。
-   * 動作: stream を ensure したうえで durable consumer を作成する。
-   * 前提: NATS 接続が有効であること。
-   */
   @PostConstruct
   public void start() {
     if (!started.compareAndSet(false, true)) {
@@ -105,6 +97,10 @@ public class MatchmakingEventSubscriber {
       message.ack();
     } catch (InvalidProtocolBufferException ex) {
       message.term();
+    } catch (NotificationEventPermanentException ex) {
+      message.term();
+    } catch (DataAccessException ex) {
+      message.nak();
     } catch (RuntimeException ex) {
       message.nak();
     }

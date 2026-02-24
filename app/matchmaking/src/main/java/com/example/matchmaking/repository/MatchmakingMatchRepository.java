@@ -13,9 +13,8 @@ import java.util.Optional;
 public interface MatchmakingMatchRepository {
 
   /**
-   * 役割: queue から 2件を取り出し、MATCHED 更新と match_id 付与を原子的に行う。
-   * 動作: 成立時は MatchPair を返し、不成立（人数不足/競合/期限切れのみ）なら empty を返す。
-   * 前提: mode は null でなく、matchedAt は現在時刻を渡す。
+   * 役割: queue から 2件を取り出し、MATCHED 更新と match_id 付与を原子的に行う。 動作: 成立時は MatchPair
+   * を返し、不成立（人数不足/競合/期限切れのみ）なら empty を返す。 前提: mode は null でなく、matchedAt は現在時刻を渡す。
    */
   Optional<MatchPair> matchTwo(MatchMode mode, Instant matchedAt);
 }

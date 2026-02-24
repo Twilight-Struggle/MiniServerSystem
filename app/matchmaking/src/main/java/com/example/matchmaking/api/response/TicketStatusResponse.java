@@ -9,4 +9,5 @@ import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
-public record TicketStatusResponse(String ticketId, String status, String expiresAt, MatchedTicketPayload matched) {}
+public record TicketStatusResponse(
+    String ticketId, String status, String expiresAt, MatchedTicketPayload matched) {}

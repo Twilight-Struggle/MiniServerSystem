@@ -31,6 +31,38 @@ tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
     archiveFileName.set("app.jar")
 }
 
+val matchmakingCoverageIncludes = listOf(
+    "com/example/matchmaking/api/**",
+    "com/example/matchmaking/service/**",
+    "com/example/matchmaking/model/**"
+)
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    classDirectories.setFrom(
+        files(sourceSets.main.get().output.asFileTree.matching { include(matchmakingCoverageIncludes) })
+    )
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+}
+
+tasks.jacocoTestCoverageVerification {
+    classDirectories.setFrom(
+        files(sourceSets.main.get().output.asFileTree.matching { include(matchmakingCoverageIncludes) })
+    )
+    violationRules {
+        rule {
+            limit {
+                counter = "LINE"
+                value = "COVEREDRATIO"
+                minimum = "0.80".toBigDecimal()
+            }
+        }
+    }
+}
+
 jib {
     // baseimage 軽量イメージへの差し替えも可
     from {

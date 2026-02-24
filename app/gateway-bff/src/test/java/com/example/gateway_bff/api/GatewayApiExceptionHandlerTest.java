@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import com.example.gateway_bff.service.AccountInactiveException;
 import com.example.gateway_bff.service.AccountIntegrationException;
 import com.example.gateway_bff.service.GatewayMetrics;
+import com.example.gateway_bff.service.MatchmakingIntegrationException;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -39,5 +40,21 @@ class GatewayApiExceptionHandlerTest {
 
     verify(metrics).recordAccountIntegrationError("ACCOUNT_TIMEOUT");
     verify(metrics).recordAccountIntegrationError("ACCOUNT_BAD_GATEWAY");
+  }
+
+  @Test
+  void handleMatchmakingIntegrationRecordsReasonSpecificMetric() {
+    final GatewayMetrics metrics = Mockito.mock(GatewayMetrics.class);
+    final GatewayApiExceptionHandler handler = new GatewayApiExceptionHandler(metrics);
+
+    handler.handleMatchmakingIntegration(
+        new MatchmakingIntegrationException(
+            MatchmakingIntegrationException.Reason.TIMEOUT, "timeout"));
+    handler.handleMatchmakingIntegration(
+        new MatchmakingIntegrationException(
+            MatchmakingIntegrationException.Reason.BAD_GATEWAY, "bad gateway"));
+
+    verify(metrics).recordAccountIntegrationError("MATCHMAKING_TIMEOUT");
+    verify(metrics).recordAccountIntegrationError("MATCHMAKING_BAD_GATEWAY");
   }
 }

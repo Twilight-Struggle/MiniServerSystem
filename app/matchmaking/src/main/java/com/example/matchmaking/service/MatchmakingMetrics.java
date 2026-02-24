@@ -1,64 +1,86 @@
-/*
- * どこで: Matchmaking サービス層
- * 何を: キュー深さ・最古待機時間・マッチ結果・TTM を計測する
- * なぜ: SLI/SLO 運用に必要な指標をアプリ内で直接観測するため
- */
 package com.example.matchmaking.service;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
+import io.micrometer.core.instrument.Timer;
+import java.time.Duration;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicLong;
 import org.springframework.stereotype.Component;
 
 @Component
 public class MatchmakingMetrics {
 
   private final MeterRegistry meterRegistry;
+  private final Timer timeToMatchTimer;
+  private final ConcurrentMap<String, AtomicLong> queueDepth = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, AtomicLong> oldestAge = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, Counter> matchResultCounters = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, Counter> dependencyErrorCounters = new ConcurrentHashMap<>();
 
   public MatchmakingMetrics(MeterRegistry meterRegistry) {
     this.meterRegistry = meterRegistry;
+    this.timeToMatchTimer =
+        Timer.builder("mm.time_to_match")
+            .description("Time from ticket creation to match completion")
+            .register(meterRegistry);
   }
 
-  /**
-   * 役割: mode ごとの queue depth を Gauge 等へ反映する。
-   * 動作: ワーカーループや API 経由で観測した深さをメトリクスに保存する。
-   * 前提: depth は 0 以上。
-   */
   public void updateQueueDepth(String mode, long depth) {
-    throw new UnsupportedOperationException("TODO: implement updateQueueDepth");
+    final AtomicLong value = queueDepth.computeIfAbsent(mode, this::registerQueueDepthGauge);
+    value.set(Math.max(0, depth));
   }
 
-  /**
-   * 役割: mode ごとの最古待機時間を反映する。
-   * 動作: キューが空でないときに oldest age を更新し、空なら 0 として扱う。
-   * 前提: ageSeconds は 0 以上。
-   */
   public void updateOldestQueueAge(String mode, long ageSeconds) {
-    throw new UnsupportedOperationException("TODO: implement updateOldestQueueAge");
+    final AtomicLong value = oldestAge.computeIfAbsent(mode, this::registerOldestAgeGauge);
+    value.set(Math.max(0, ageSeconds));
   }
 
-  /**
-   * 役割: マッチ処理結果件数をカウントする。
-   * 動作: `matched|expired|cancelled|error` などの result タグでインクリメントする。
-   * 前提: result は運用で定義した定数を渡す。
-   */
   public void recordMatchResult(String result) {
-    throw new UnsupportedOperationException("TODO: implement recordMatchResult");
+    matchResultCounters.computeIfAbsent(result, this::registerMatchResultCounter).increment();
   }
 
-  /**
-   * 役割: ticket 作成から match 成立までの遅延(TTM)を記録する。
-   * 動作: createdAt <= matchedAt の場合にのみ Timer へ記録し、逆転時刻は破棄する。
-   * 前提: 引数は ISO-8601 文字列などへ変換可能な時刻であること。
-   */
   public void recordTimeToMatchSeconds(long seconds) {
-    throw new UnsupportedOperationException("TODO: implement recordTimeToMatchSeconds");
+    if (seconds < 0) {
+      return;
+    }
+    timeToMatchTimer.record(Duration.ofSeconds(seconds));
   }
 
-  /**
-   * 役割: Redis/Lua 実行失敗など依存障害をカウントする。
-   * 動作: エラー種別タグを付与して件数を増やす。
-   * 前提: errorType は空でないこと。
-   */
   public void recordDependencyError(String errorType) {
-    throw new UnsupportedOperationException("TODO: implement recordDependencyError");
+    dependencyErrorCounters
+        .computeIfAbsent(errorType, this::registerDependencyErrorCounter)
+        .increment();
+  }
+
+  private AtomicLong registerQueueDepthGauge(String mode) {
+    final AtomicLong value = new AtomicLong(0);
+    Gauge.builder("mm.queue.depth", value, AtomicLong::get)
+        .tags(Tags.of("mode", mode))
+        .register(meterRegistry);
+    return value;
+  }
+
+  private AtomicLong registerOldestAgeGauge(String mode) {
+    final AtomicLong value = new AtomicLong(0);
+    Gauge.builder("mm.queue.oldest_age", value, AtomicLong::get)
+        .tags(Tags.of("mode", mode))
+        .register(meterRegistry);
+    return value;
+  }
+
+  private Counter registerMatchResultCounter(String result) {
+    return Counter.builder("mm.match.total")
+        .tags(Tags.of("result", result))
+        .register(meterRegistry);
+  }
+
+  private Counter registerDependencyErrorCounter(String errorType) {
+    return Counter.builder("mm.dependency.error.total")
+        .tags(Tags.of("type", errorType))
+        .register(meterRegistry);
   }
 }

@@ -1,19 +1,22 @@
-/*
- * どこで: Matchmaking サービス層
- * 何を: Join/Status/Cancel のユースケースを実装する
- * なぜ: API 層からドメイン処理を分離し、TDD で段階実装するため
- */
 package com.example.matchmaking.service;
 
 import com.example.matchmaking.api.InvalidMatchmakingRequestException;
+import com.example.matchmaking.api.TicketAccessDeniedException;
 import com.example.matchmaking.api.TicketNotFoundException;
 import com.example.matchmaking.api.request.JoinMatchmakingTicketRequest;
 import com.example.matchmaking.api.response.CancelMatchmakingTicketResponse;
 import com.example.matchmaking.api.response.JoinMatchmakingTicketResponse;
+import com.example.matchmaking.api.response.MatchedTicketPayload;
 import com.example.matchmaking.api.response.TicketStatusResponse;
 import com.example.matchmaking.config.MatchmakingProperties;
 import com.example.matchmaking.model.MatchMode;
+import com.example.matchmaking.model.TicketRecord;
+import com.example.matchmaking.model.TicketStatus;
 import com.example.matchmaking.repository.MatchmakingTicketRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -21,50 +24,55 @@ public class MatchmakingService {
 
   private final MatchmakingTicketRepository ticketRepository;
   private final MatchmakingProperties properties;
+  private final ObjectMapper objectMapper;
 
   public MatchmakingService(
-      MatchmakingTicketRepository ticketRepository, MatchmakingProperties properties) {
+      MatchmakingTicketRepository ticketRepository,
+      MatchmakingProperties properties,
+      ObjectMapper objectMapper) {
     this.ticketRepository = ticketRepository;
     this.properties = properties;
+    this.objectMapper = objectMapper;
   }
 
-  /**
-   * 役割: Join API を処理し ticket をキューへ追加する。
-   * 動作: mode と party_size を検証し、idempotency を評価した上で ticket を返却する。
-   * 前提: userId は認証済みの内部ユーザー ID が渡されること。
-   */
   public JoinMatchmakingTicketResponse join(
       String mode, String userId, JoinMatchmakingTicketRequest request) {
-    validateJoinRequest(mode, userId, request);
-    throw new UnsupportedOperationException("TODO: implement join");
+    final MatchMode matchMode = validateJoinRequest(mode, userId, request);
+    final String attributesJson = serializeAttributes(request.attributes());
+    final TicketRecord record =
+        ticketRepository.createOrReuseTicket(
+            matchMode,
+            userId,
+            request.idempotencyKey(),
+            attributesJson,
+            properties.ticketTtl(),
+            properties.idempotencyTtl());
+    return new JoinMatchmakingTicketResponse(
+        record.ticketId(), record.status().name(), toIsoOrNull(record.expiresAt()));
   }
 
-  /**
-   * 役割: ticket の現在状態を返す。
-   * 動作: ticket 所有者チェックを行い、必要なら EXPIRED 判定を反映して返す。
-   * 前提: userId は認証済みユーザー。
-   */
   public TicketStatusResponse getTicketStatus(String ticketId, String userId) {
-    validateTicketOwner(ticketId, userId);
-    throw new UnsupportedOperationException("TODO: implement getTicketStatus");
+    validateTicketIdAndUserId(ticketId, userId);
+    final TicketRecord record = requireOwnedTicket(ticketId, userId);
+    return toStatusResponse(record);
   }
 
-  /**
-   * 役割: ticket のキャンセル要求を処理する。
-   * 動作: 所有者チェック後、status=QUEUED の場合に CANCELLED へ遷移し、終端状態でも 200 応答を返す。
-   * 前提: userId は認証済みユーザー。
-   */
   public CancelMatchmakingTicketResponse cancelTicket(String ticketId, String userId) {
-    validateTicketOwner(ticketId, userId);
-    throw new UnsupportedOperationException("TODO: implement cancelTicket");
+    validateTicketIdAndUserId(ticketId, userId);
+    final TicketRecord record =
+        ticketRepository
+            .cancelTicket(ticketId)
+            .orElseThrow(() -> new TicketNotFoundException(ticketId));
+    ensureOwner(record, userId);
+    return new CancelMatchmakingTicketResponse(record.ticketId(), record.status().name());
   }
 
-  private void validateJoinRequest(
+  private MatchMode validateJoinRequest(
       String mode, String userId, JoinMatchmakingTicketRequest request) {
     if (mode == null || mode.isBlank()) {
       throw new InvalidMatchmakingRequestException("mode is required");
     }
-    MatchMode.fromValue(mode);
+    final MatchMode matchMode = MatchMode.fromValue(mode);
     if (userId == null || userId.isBlank()) {
       throw new InvalidMatchmakingRequestException("userId is required");
     }
@@ -74,16 +82,57 @@ public class MatchmakingService {
     if (request.partySize() == null || request.partySize() != 1) {
       throw new InvalidMatchmakingRequestException("party_size must be 1");
     }
+    if (request.idempotencyKey() == null || request.idempotencyKey().isBlank()) {
+      throw new InvalidMatchmakingRequestException("idempotency_key is required");
+    }
+    return matchMode;
   }
 
-  private void validateTicketOwner(String ticketId, String userId) {
+  private void validateTicketIdAndUserId(String ticketId, String userId) {
     if (ticketId == null || ticketId.isBlank()) {
       throw new InvalidMatchmakingRequestException("ticketId is required");
     }
     if (userId == null || userId.isBlank()) {
       throw new InvalidMatchmakingRequestException("userId is required");
     }
-    // TODO: ticket を読み出して owner 判定し、合致しなければ 404/403 方針に沿って例外化する。
-    throw new TicketNotFoundException(ticketId);
+  }
+
+  private TicketRecord requireOwnedTicket(String ticketId, String userId) {
+    final TicketRecord record =
+        ticketRepository
+            .findTicketById(ticketId)
+            .orElseThrow(() -> new TicketNotFoundException(ticketId));
+    ensureOwner(record, userId);
+    return record;
+  }
+
+  private void ensureOwner(TicketRecord record, String userId) {
+    if (!userId.equals(record.userId())) {
+      throw new TicketAccessDeniedException(record.ticketId());
+    }
+  }
+
+  private TicketStatusResponse toStatusResponse(TicketRecord record) {
+    final MatchedTicketPayload matched =
+        record.status() == TicketStatus.MATCHED
+                && record.matchId() != null
+                && !record.matchId().isBlank()
+            ? new MatchedTicketPayload(record.matchId(), List.of(), Map.of())
+            : null;
+    return new TicketStatusResponse(
+        record.ticketId(), record.status().name(), toIsoOrNull(record.expiresAt()), matched);
+  }
+
+  private String serializeAttributes(Map<String, Object> attributes) {
+    final Map<String, Object> safeAttributes = attributes == null ? Map.of() : attributes;
+    try {
+      return objectMapper.writeValueAsString(safeAttributes);
+    } catch (JsonProcessingException ex) {
+      throw new InvalidMatchmakingRequestException("attributes serialization failed");
+    }
+  }
+
+  private String toIsoOrNull(java.time.Instant instant) {
+    return instant == null ? null : instant.toString();
   }
 }

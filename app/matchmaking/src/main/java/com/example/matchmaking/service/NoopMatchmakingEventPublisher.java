@@ -13,11 +13,7 @@ import org.springframework.stereotype.Service;
 @ConditionalOnProperty(name = "nats.enabled", havingValue = "false")
 public class NoopMatchmakingEventPublisher {
 
-  /**
-   * 役割: NATS 無効時に publish 呼び出しを吸収する。
-   * 動作: 何もしない。
-   * 前提: なし。
-   */
+  /** 役割: NATS 無効時に publish 呼び出しを吸収する。 動作: 何もしない。 前提: なし。 */
   public void publishMatched(MatchPair pair) {
     // no-op
   }

@@ -11,4 +11,5 @@ import java.util.List;
 import java.util.Map;
 
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
-public record MatchedTicketPayload(String matchId, List<String> peerUserIds, Map<String, Object> session) {}
+public record MatchedTicketPayload(
+    String matchId, List<String> peerUserIds, Map<String, Object> session) {}

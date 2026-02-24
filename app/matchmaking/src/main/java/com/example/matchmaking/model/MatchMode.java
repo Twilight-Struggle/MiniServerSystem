@@ -20,9 +20,8 @@ public enum MatchMode {
   }
 
   /**
-   * 役割: API で受け取った mode 文字列を内部列挙型へ変換する。
-   * 動作: 大文字小文字を無視して一致判定を行い、未対応値は IllegalArgumentException を送出する。
-   * 前提: mode は null でないことを呼び出し側で保証する。
+   * 役割: API で受け取った mode 文字列を内部列挙型へ変換する。 動作: 大文字小文字を無視して一致判定を行い、未対応値は IllegalArgumentException
+   * を送出する。 前提: mode は null でないことを呼び出し側で保証する。
    */
   public static MatchMode fromValue(String mode) {
     for (MatchMode matchMode : values()) {

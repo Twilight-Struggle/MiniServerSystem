@@ -1,22 +1,83 @@
-/*
- * どこで: Notification サービス層
- * 何を: matchmaking イベントを notifications テーブルへ反映する
- * なぜ: match 成立通知を既存通知基盤へ統合するため
- */
 package com.example.notification.service;
 
+import com.example.notification.model.NotificationRecord;
+import com.example.notification.model.NotificationStatus;
+import com.example.notification.repository.NotificationRepository;
+import com.example.notification.repository.ProcessedEventRepository;
 import com.example.proto.matchmaking.MatchmakingEvent;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Clock;
+import java.time.Instant;
+import java.util.Map;
+import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class MatchmakingEventHandler {
 
-  /**
-   * 役割: マッチ成立イベントを永続化する。
-   * 動作: processed_events の冪等チェック後、notifications に PENDING レコードを作成する。
-   * 前提: event_id, occurred_at, match_id が有効形式であること。
-   */
+  private static final String NOTIFICATION_TYPE_MATCH_FOUND = "MatchFound";
+  private static final String SYSTEM_USER_ID = "matchmaking-system";
+
+  private final ProcessedEventRepository processedEventRepository;
+  private final NotificationRepository notificationRepository;
+  private final ObjectMapper objectMapper;
+  private final Clock clock;
+
+  @Transactional
   public void handleMatchmakingEvent(MatchmakingEvent event) {
-    throw new UnsupportedOperationException("TODO: implement handleMatchmakingEvent");
+    final UUID eventId = parseEventId(event);
+    final Instant occurredAt = parseOccurredAt(event);
+    final Instant now = Instant.now(clock);
+    final boolean inserted = processedEventRepository.insertIfAbsent(eventId, now);
+    if (!inserted) {
+      return;
+    }
+    final String payloadJson = serializePayload(event.getMatchId());
+    final NotificationRecord record =
+        new NotificationRecord(
+            UUID.randomUUID(),
+            eventId,
+            SYSTEM_USER_ID,
+            NOTIFICATION_TYPE_MATCH_FOUND,
+            occurredAt,
+            payloadJson,
+            NotificationStatus.PENDING,
+            null,
+            null,
+            null,
+            0,
+            now,
+            now,
+            null);
+    notificationRepository.insert(record);
+  }
+
+  private UUID parseEventId(MatchmakingEvent event) {
+    try {
+      return UUID.fromString(event.getEventId());
+    } catch (RuntimeException ex) {
+      throw new NotificationEventPermanentException("invalid matchmaking event_id", ex);
+    }
+  }
+
+  private Instant parseOccurredAt(MatchmakingEvent event) {
+    try {
+      return Instant.parse(event.getOccurredAt());
+    } catch (RuntimeException ex) {
+      throw new NotificationEventPermanentException("invalid matchmaking occurred_at", ex);
+    }
+  }
+
+  private String serializePayload(String matchId) {
+    try {
+      return objectMapper.writeValueAsString(Map.of("match_id", matchId));
+    } catch (JsonProcessingException ex) {
+      throw new NotificationEventPermanentException(
+          "matchmaking payload serialization failure", ex);
+    }
   }
 }
