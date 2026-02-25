@@ -20,9 +20,12 @@ import io.nats.client.api.StreamConfiguration;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
@@ -96,18 +99,42 @@ public class MatchmakingEventSubscriber {
   }
 
   void handleMessage(Message message) {
+    final List<MDC.MDCCloseable> mdcCloseables = new ArrayList<>();
     try {
       final MatchmakingEvent event = MatchmakingEvent.parseFrom(message.getData());
+      putMdc(mdcCloseables, "event_id", event.getEventId());
+      putMdc(mdcCloseables, "event_type", event.getEventType().name());
+      putMdc(mdcCloseables, "source_id", event.getMatchId());
+      putMdc(mdcCloseables, "trace_id", event.getTraceId());
       eventHandler.handleMatchmakingEvent(event);
       message.ack();
     } catch (InvalidProtocolBufferException ex) {
+      logger.warn("failed to parse matchmaking nats message payload", ex);
       message.term();
     } catch (NotificationEventPermanentException ex) {
+      logger.warn("permanent failure while handling matchmaking nats message", ex);
       message.term();
     } catch (DataAccessException ex) {
+      logger.warn("temporary failure while handling matchmaking nats message", ex);
       message.nak();
     } catch (RuntimeException ex) {
+      logger.warn("failed to handle matchmaking nats message", ex);
       message.nak();
+    } finally {
+      closeMdc(mdcCloseables);
+    }
+  }
+
+  private void putMdc(List<MDC.MDCCloseable> mdcCloseables, String key, String value) {
+    if (value == null || value.isBlank()) {
+      return;
+    }
+    mdcCloseables.add(MDC.putCloseable(key, value));
+  }
+
+  private void closeMdc(List<MDC.MDCCloseable> mdcCloseables) {
+    for (int i = mdcCloseables.size() - 1; i >= 0; i--) {
+      mdcCloseables.get(i).close();
     }
   }
 

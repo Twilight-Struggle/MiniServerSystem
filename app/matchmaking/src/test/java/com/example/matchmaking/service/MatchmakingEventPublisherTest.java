@@ -9,6 +9,8 @@ import static org.mockito.Mockito.when;
 import com.example.matchmaking.config.MatchmakingNatsProperties;
 import com.example.matchmaking.model.MatchMode;
 import com.example.matchmaking.model.MatchPair;
+import com.example.proto.matchmaking.MatchmakingEvent;
+import com.google.protobuf.InvalidProtocolBufferException;
 import io.nats.client.JetStream;
 import io.nats.client.JetStreamApiException;
 import io.nats.client.impl.Headers;
@@ -19,6 +21,7 @@ import java.time.ZoneOffset;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.slf4j.MDC;
 
 class MatchmakingEventPublisherTest {
 
@@ -37,6 +40,36 @@ class MatchmakingEventPublisherTest {
     publisher.publishMatched(pair);
 
     verify(jetStream).publish(eq("matchmaking.events"), any(Headers.class), any(byte[].class));
+  }
+
+  @Test
+  void usesMdcTraceIdWhenAvailable()
+      throws IOException, JetStreamApiException, InvalidProtocolBufferException {
+    final JetStream jetStream = Mockito.mock(JetStream.class);
+    final MatchmakingNatsProperties properties =
+        new MatchmakingNatsProperties(
+            "matchmaking.events", "matchmaking-events", java.time.Duration.ofMinutes(2));
+    final Clock clock = Clock.fixed(Instant.parse("2026-02-24T12:00:00Z"), ZoneOffset.UTC);
+    final MatchmakingEventPublisher publisher =
+        new MatchmakingEventPublisher(jetStream, properties, clock);
+    MDC.put("trace_id", "trace-from-mdc");
+    final byte[][] payload = new byte[1][];
+    when(jetStream.publish(any(String.class), any(Headers.class), any(byte[].class)))
+        .thenAnswer(
+            invocation -> {
+              payload[0] = invocation.getArgument(2);
+              return null;
+            });
+
+    try {
+      publisher.publishMatched(
+          new MatchPair("match-1", MatchMode.CASUAL, "ticket-1", "ticket-2", Instant.now(clock)));
+    } finally {
+      MDC.clear();
+    }
+
+    final MatchmakingEvent event = MatchmakingEvent.parseFrom(payload[0]);
+    org.assertj.core.api.Assertions.assertThat(event.getTraceId()).isEqualTo("trace-from-mdc");
   }
 
   @Test

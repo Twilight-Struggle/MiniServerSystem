@@ -183,6 +183,11 @@ SLI-D: DLQ 発生件数
 - `entitlement.outbox.publish.delay`: outbox publish 遅延（`created_at -> published_at`）
 - `entitlement.outbox.backlog.age`: outbox claim 時の滞留時間（`now - created_at`）
 - `entitlement.outbox.failed.current`: outbox `FAILED` 現在件数
+- `mm.time_to_match`: ticket 作成からマッチ成立までの遅延
+- `mm.queue.depth{mode}`: mode ごとの待機件数
+- `mm.queue.oldest_age{mode}`: mode ごとの最古待機時間（秒）
+- `mm.match.total{result}`: マッチ結果件数（`matched` / `cancelled`）
+- `mm.dependency.error.total{type}`: 依存障害件数（Redis/NATS/worker_loop など）
 - `notification.delivery.total{result}`: 配信結果（`sent` / `failed` / `retry_scheduled`）
 - `notification.delivery.e2e.delay`: End-to-End 遅延（`occurred_at -> sent_at`）
 - `notification.backlog.current`: backlog 件数（`PENDING` + lease 切れ `PROCESSING`）
@@ -191,7 +196,8 @@ SLI-D: DLQ 発生件数
 HTTP 系 SLI（Gateway-BFF / Account）の成功率・レイテンシは `http.server.requests`（uri / status / exception タグ）を一次指標として集計する。
 
 注記:
-- Matchmaking のキュー参加/マッチ成立フローは未実装のため、`Time-to-Match` 系メトリクスは今後の実装対象とする。
+- Matchmaking の `SLI-A` は `http.server.requests{uri="/v1/matchmaking/queues/{mode}/tickets"}` を一次指標として集計する。
+- Matchmaking の `SLI-B` は `mm.time_to_match` を一次指標として集計する。
 
 - 構成とデータフロー: `docs/architecture.md`
 - 監視対象と異常パターン: `docs/failure-modes.md`

@@ -25,6 +25,7 @@ public class MatchmakingService {
 
   private final MatchmakingTicketRepository ticketRepository;
   private final MatchmakingProperties properties;
+  private final MatchmakingMetrics metrics;
 
   @SuppressFBWarnings(
       value = "EI_EXPOSE_REP2",
@@ -34,9 +35,11 @@ public class MatchmakingService {
   public MatchmakingService(
       MatchmakingTicketRepository ticketRepository,
       MatchmakingProperties properties,
+      MatchmakingMetrics metrics,
       ObjectMapper objectMapper) {
     this.ticketRepository = ticketRepository;
     this.properties = properties;
+    this.metrics = metrics;
     this.objectMapper = objectMapper;
   }
 
@@ -64,11 +67,14 @@ public class MatchmakingService {
 
   public CancelMatchmakingTicketResponse cancelTicket(String ticketId, String userId) {
     validateTicketIdAndUserId(ticketId, userId);
-    requireOwnedTicket(ticketId, userId);
+    final TicketRecord existing = requireOwnedTicket(ticketId, userId);
     final TicketRecord cancelled =
         ticketRepository
             .cancelTicket(ticketId)
             .orElseThrow(() -> new TicketNotFoundException(ticketId));
+    if (existing.status() == TicketStatus.QUEUED && cancelled.status() == TicketStatus.CANCELLED) {
+      metrics.recordMatchResult("cancelled");
+    }
     return new CancelMatchmakingTicketResponse(cancelled.ticketId(), cancelled.status().name());
   }
 

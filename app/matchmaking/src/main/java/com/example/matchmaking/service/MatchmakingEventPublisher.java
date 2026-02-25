@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.UUID;
+import org.slf4j.MDC;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
@@ -40,7 +41,7 @@ public class MatchmakingEventPublisher {
             .setOccurredAt(Instant.now(clock).toString())
             .setMatchId(pair.matchId())
             .setMode(pair.mode().value())
-            .setTraceId(UUID.randomUUID().toString())
+            .setTraceId(resolveTraceId())
             .build();
     final Headers headers = new Headers();
     headers.add("Nats-Msg-Id", eventId);
@@ -49,5 +50,17 @@ public class MatchmakingEventPublisher {
     } catch (IOException | JetStreamApiException ex) {
       throw new IllegalStateException("failed to publish matchmaking event", ex);
     }
+  }
+
+  private String resolveTraceId() {
+    final String traceId = MDC.get("trace_id");
+    if (traceId != null && !traceId.isBlank()) {
+      return traceId;
+    }
+    final String legacyTraceId = MDC.get("traceId");
+    if (legacyTraceId != null && !legacyTraceId.isBlank()) {
+      return legacyTraceId;
+    }
+    return UUID.randomUUID().toString();
   }
 }

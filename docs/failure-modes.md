@@ -198,6 +198,26 @@
 - 検知: DLQ と notifications の突合差分
 - 緩和方針: 同一 Tx 保証、ロック喪失時 rollback 徹底
 
+### 3.8 Matchmaking（キュー + Worker）
+
+#### FM-MM-01: Redis 遅延/停止
+- 症状: Join/Status/Cancel API の失敗や遅延が増え、queue depth が増加する
+- 影響: `Matchmaking SLI-A` 悪化、`Matchmaking SLI-B` も連鎖悪化
+- 検知: `http.server.requests` の 5xx/timeout 増、`mm.dependency.error.total{type}` 増加
+- 緩和方針: Redis 到達性と負荷を優先復旧し、必要なら API 入口を抑制する
+
+#### FM-MM-02: Worker 停滞（loop 失敗継続）
+- 症状: queue depth / oldest age が単調増加し、match 成立が停滞する
+- 影響: `Matchmaking SLI-B`（time-to-match）悪化
+- 検知: `mm.queue.depth{mode}` と `mm.queue.oldest_age{mode}` の増加継続、`mm.dependency.error.total{type="worker_loop"}` 増加
+- 緩和方針: worker の例外ログを起点に Redis/NATS 依存を切り分け、再起動と負荷抑制を実施する
+
+#### FM-MM-03: Match 成立後のイベント publish 失敗
+- 症状: ticket は `MATCHED` だが通知が作成されず、利用者が結果を受信しない
+- 影響: Matchmaking 導線の体感劣化、問い合わせ増加
+- 検知: worker 側 publish 失敗ログ、`mm.dependency.error.total{type}` 増加、Notification 側の matchmaking 受信件数低下
+- 緩和方針: NATS 接続/subject/stream 設定を復旧し、必要なら対象 ticket の再通知手順を実行する
+
 ## 4. 不変条件（Invariant）
 
 - I1: ログイン導線は正常時に `/login -> 302 -> OIDC` を満たす
@@ -214,6 +234,7 @@
 - Gateway-BFF SLI-A/B: FM-AUTH-01/02/03, FM-BFF-ACC-01/02/03/04/05
 - Account SLI-A/B/C: FM-ACC-01/02/03/04, FM-DB-01/03
 - Entitlement SLI-C/D/E: FM-OB-01/02/03, FM-DB-01
+- Matchmaking SLI-A/B: FM-MM-01/02/03, FM-DB-01
 - Notification SLI-B/C/D: FM-NATS-01/02/03, FM-NOTI-01/02/03/04/05, FM-DB-02
 
 ## 6. 参照関係

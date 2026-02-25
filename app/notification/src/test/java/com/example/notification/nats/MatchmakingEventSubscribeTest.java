@@ -35,6 +35,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.MDC;
 import org.springframework.dao.DataAccessResourceFailureException;
 
 @ExtendWith(MockitoExtension.class)
@@ -88,6 +89,38 @@ class MatchmakingEventSubscribeTest {
     verify(message).ack();
     verify(message, never()).nak();
     verify(message, never()).term();
+  }
+
+  @Test
+  void putsEventFieldsIntoMdcWhileHandlingMessage()
+      throws IOException, InterruptedException, JetStreamApiException {
+    final Message message = org.mockito.Mockito.mock(Message.class);
+    stubConnection();
+    when(message.getData()).thenReturn(buildEventBytes());
+    doReturn(subscription)
+        .when(jetStream)
+        .subscribe(
+            eq(SUBJECT),
+            eq(dispatcher),
+            handlerCaptor.capture(),
+            eq(false),
+            any(PushSubscribeOptions.class));
+    org.mockito.Mockito.doAnswer(
+            invocation -> {
+              assertEquals("22222222-2222-2222-2222-222222222222", MDC.get("event_id"));
+              assertEquals("MATCH_FOUND", MDC.get("event_type"));
+              assertEquals("match-1", MDC.get("source_id"));
+              assertEquals("trace-1", MDC.get("trace_id"));
+              return null;
+            })
+        .when(eventHandler)
+        .handleMatchmakingEvent(any(MatchmakingEvent.class));
+
+    subscriber.start();
+    handlerCaptor.getValue().onMessage(message);
+
+    assertEquals(null, MDC.get("event_id"));
+    assertEquals(null, MDC.get("trace_id"));
   }
 
   @Test

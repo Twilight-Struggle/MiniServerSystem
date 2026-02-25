@@ -3,6 +3,7 @@ package com.example.matchmaking.repository;
 import com.example.matchmaking.model.MatchMode;
 import com.example.matchmaking.model.TicketRecord;
 import com.example.matchmaking.model.TicketStatus;
+import com.example.matchmaking.service.MatchmakingMetrics;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.time.Duration;
 import java.time.Instant;
@@ -32,8 +33,12 @@ public class RedisMatchmakingTicketRepository implements MatchmakingTicketReposi
       justification = "StringRedisTemplate は Spring 管理の共有コンポーネントで防御的コピーが不可能なため")
   private final StringRedisTemplate redisTemplate;
 
-  public RedisMatchmakingTicketRepository(StringRedisTemplate redisTemplate) {
+  private final MatchmakingMetrics metrics;
+
+  public RedisMatchmakingTicketRepository(
+      StringRedisTemplate redisTemplate, MatchmakingMetrics metrics) {
     this.redisTemplate = redisTemplate;
+    this.metrics = metrics;
   }
 
   @Override
@@ -91,17 +96,23 @@ public class RedisMatchmakingTicketRepository implements MatchmakingTicketReposi
       return Optional.empty();
     }
     final Map<String, String> fields = normalizeFields(raw);
+    final MatchMode mode = MatchMode.fromValue(fields.get(FIELD_MODE));
     TicketStatus status = parseStatus(fields.get(FIELD_STATUS));
     final Instant expiresAt = parseInstant(fields.get(FIELD_EXPIRES_AT));
     if (status == TicketStatus.QUEUED && expiresAt != null && !Instant.now().isBefore(expiresAt)) {
       status = TicketStatus.EXPIRED;
+      redisTemplate
+          .opsForHash()
+          .put(ticketKey(ticketId), FIELD_STATUS, TicketStatus.EXPIRED.name());
+      redisTemplate.opsForZSet().remove(queueKey(mode), ticketId);
+      metrics.recordMatchResult("expired");
     }
 
     return Optional.of(
         new TicketRecord(
             ticketId,
             fields.get(FIELD_USER_ID),
-            MatchMode.fromValue(fields.get(FIELD_MODE)),
+            mode,
             status,
             parseInstant(fields.get(FIELD_CREATED_AT)),
             expiresAt,

@@ -29,15 +29,17 @@ import org.mockito.Mockito;
 class MatchmakingServiceTest {
 
   private MatchmakingTicketRepository repository;
+  private MatchmakingMetrics metrics;
   private MatchmakingService service;
 
   @BeforeEach
   void setUp() {
     repository = Mockito.mock(MatchmakingTicketRepository.class);
+    metrics = Mockito.mock(MatchmakingMetrics.class);
     final MatchmakingProperties properties =
         new MatchmakingProperties(
             Duration.ofSeconds(60), Duration.ofSeconds(60), Duration.ofSeconds(1), 50, true);
-    service = new MatchmakingService(repository, properties, new ObjectMapper());
+    service = new MatchmakingService(repository, properties, metrics, new ObjectMapper());
   }
 
   @Test
@@ -201,5 +203,39 @@ class MatchmakingServiceTest {
 
     assertThat(response.ticketId()).isEqualTo("ticket-1");
     assertThat(response.status()).isEqualTo("CANCELLED");
+    verify(metrics).recordMatchResult("cancelled");
+  }
+
+  @Test
+  void cancelTicketDoesNotRecordCancelledWhenAlreadyCancelled() {
+    when(repository.findTicketById("ticket-1"))
+        .thenReturn(
+            Optional.of(
+                new TicketRecord(
+                    "ticket-1",
+                    "user-1",
+                    MatchMode.CASUAL,
+                    TicketStatus.CANCELLED,
+                    Instant.parse("2026-02-24T12:00:00Z"),
+                    Instant.parse("2026-02-24T12:01:00Z"),
+                    "{}",
+                    null)));
+    when(repository.cancelTicket("ticket-1"))
+        .thenReturn(
+            Optional.of(
+                new TicketRecord(
+                    "ticket-1",
+                    "user-1",
+                    MatchMode.CASUAL,
+                    TicketStatus.CANCELLED,
+                    Instant.parse("2026-02-24T12:00:00Z"),
+                    Instant.parse("2026-02-24T12:01:00Z"),
+                    "{}",
+                    null)));
+
+    final var response = service.cancelTicket("ticket-1", "user-1");
+
+    assertThat(response.status()).isEqualTo("CANCELLED");
+    verify(metrics, never()).recordMatchResult("cancelled");
   }
 }

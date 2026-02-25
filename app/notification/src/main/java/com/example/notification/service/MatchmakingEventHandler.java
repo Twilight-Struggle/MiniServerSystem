@@ -12,6 +12,8 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class MatchmakingEventHandler {
 
+  private static final Logger logger = LoggerFactory.getLogger(MatchmakingEventHandler.class);
   private static final String NOTIFICATION_TYPE_MATCH_FOUND = "MatchFound";
   private static final String SYSTEM_USER_ID = "matchmaking-system";
 
@@ -34,6 +37,7 @@ public class MatchmakingEventHandler {
     final Instant now = Instant.now(clock);
     final boolean inserted = processedEventRepository.insertIfAbsent(eventId, now);
     if (!inserted) {
+      logger.info("duplicate matchmaking event skipped");
       return;
     }
     final String payloadJson = serializePayload(event.getMatchId());
@@ -54,6 +58,7 @@ public class MatchmakingEventHandler {
             now,
             null);
     notificationRepository.insert(record);
+    logger.info("matchmaking event accepted and queued");
   }
 
   private UUID parseEventId(MatchmakingEvent event) {

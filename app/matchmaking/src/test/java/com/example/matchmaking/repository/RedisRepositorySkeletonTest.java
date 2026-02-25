@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.matchmaking.model.MatchMode;
 import com.example.matchmaking.model.TicketStatus;
+import com.example.matchmaking.service.MatchmakingMetrics;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -37,9 +38,10 @@ class RedisRepositorySkeletonTest {
     when(redisTemplate.opsForHash()).thenReturn(hashOps);
     when(redisTemplate.opsForZSet()).thenReturn(zSetOps);
     when(valueOps.get("mm:idemp:user-1:casual:idem-1")).thenReturn(null);
+    final MatchmakingMetrics metrics = Mockito.mock(MatchmakingMetrics.class);
 
     final RedisMatchmakingTicketRepository repository =
-        new RedisMatchmakingTicketRepository(redisTemplate);
+        new RedisMatchmakingTicketRepository(redisTemplate, metrics);
 
     final var ticket =
         repository.createOrReuseTicket(
@@ -76,11 +78,13 @@ class RedisRepositorySkeletonTest {
                 "mode", "casual",
                 "status", "QUEUED",
                 "created_at", "2026-02-24T12:00:00Z",
-                "expires_at", "2026-02-24T12:01:00Z",
+                "expires_at", Instant.now().plusSeconds(60).toString(),
                 "attributes", "{}"));
 
+    final MatchmakingMetrics metrics = Mockito.mock(MatchmakingMetrics.class);
+
     final RedisMatchmakingTicketRepository repository =
-        new RedisMatchmakingTicketRepository(redisTemplate);
+        new RedisMatchmakingTicketRepository(redisTemplate, metrics);
 
     final var ticket =
         repository.createOrReuseTicket(
@@ -112,8 +116,10 @@ class RedisRepositorySkeletonTest {
                 "expires_at", Instant.now().plusSeconds(60).toString(),
                 "attributes", "{}"));
 
+    final MatchmakingMetrics metrics = Mockito.mock(MatchmakingMetrics.class);
+
     final RedisMatchmakingTicketRepository repository =
-        new RedisMatchmakingTicketRepository(redisTemplate);
+        new RedisMatchmakingTicketRepository(redisTemplate, metrics);
 
     final var cancelled = repository.cancelTicket("ticket-1");
 
@@ -135,13 +141,45 @@ class RedisRepositorySkeletonTest {
             Set.of(
                 new org.springframework.data.redis.core.DefaultTypedTuple<>(
                     "ticket-1", (double) Instant.now().minusSeconds(8).toEpochMilli())));
+    final MatchmakingMetrics metrics = Mockito.mock(MatchmakingMetrics.class);
 
     final RedisMatchmakingTicketRepository repository =
-        new RedisMatchmakingTicketRepository(redisTemplate);
+        new RedisMatchmakingTicketRepository(redisTemplate, metrics);
 
     assertThat(repository.queueDepth(MatchMode.CASUAL)).isEqualTo(3L);
     assertThat(repository.oldestQueueAgeSeconds(MatchMode.CASUAL)).isPresent();
     assertThat(repository.oldestQueueAgeSeconds(MatchMode.CASUAL).get()).isGreaterThanOrEqualTo(7L);
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  void findTicketByIdMarksExpiredAndRecordsMetric() {
+    final StringRedisTemplate redisTemplate = Mockito.mock(StringRedisTemplate.class);
+    final HashOperations<String, Object, Object> hashOps = Mockito.mock(HashOperations.class);
+    final ZSetOperations<String, String> zSetOps = Mockito.mock(ZSetOperations.class);
+    final MatchmakingMetrics metrics = Mockito.mock(MatchmakingMetrics.class);
+    when(redisTemplate.opsForHash()).thenReturn(hashOps);
+    when(redisTemplate.opsForZSet()).thenReturn(zSetOps);
+    when(hashOps.entries("mm:ticket:ticket-1"))
+        .thenReturn(
+            Map.of(
+                "user_id", "user-1",
+                "mode", "casual",
+                "status", "QUEUED",
+                "created_at", "2026-02-24T12:00:00Z",
+                "expires_at", Instant.now().minusSeconds(30).toString(),
+                "attributes", "{}"));
+
+    final RedisMatchmakingTicketRepository repository =
+        new RedisMatchmakingTicketRepository(redisTemplate, metrics);
+
+    final var ticket = repository.findTicketById("ticket-1");
+
+    assertThat(ticket).isPresent();
+    assertThat(ticket.get().status()).isEqualTo(TicketStatus.EXPIRED);
+    verify(hashOps).put("mm:ticket:ticket-1", "status", "EXPIRED");
+    verify(zSetOps).remove("mm:queue:casual", "ticket-1");
+    verify(metrics).recordMatchResult("expired");
   }
 
   @SuppressWarnings("unchecked")
