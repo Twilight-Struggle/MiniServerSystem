@@ -22,6 +22,8 @@ ENTITLEMENT_REMOTE_PORT="80"
 REALM="miniserversystem"
 USERNAME="test"
 PASSWORD="test"
+KEYCLOAK_ADMIN_USERNAME="admin"
+KEYCLOAK_ADMIN_PASSWORD="admin"
 TIMEOUT_SEC="120"
 
 usage() {
@@ -49,6 +51,10 @@ Options:
   --realm <name>          Keycloak realm name (default: ${REALM})
   --username <name>       Keycloak test user (default: ${USERNAME})
   --password <pw>         Keycloak test password (default: ${PASSWORD})
+  --keycloak-admin-username <name>
+                          Keycloak admin user for E2E fixture setup (default: ${KEYCLOAK_ADMIN_USERNAME})
+  --keycloak-admin-password <pw>
+                          Keycloak admin password for E2E fixture setup (default: ${KEYCLOAK_ADMIN_PASSWORD})
   --timeout-sec <sec>     Wait timeout for readiness (default: ${TIMEOUT_SEC})
 EOF
 }
@@ -69,6 +75,8 @@ while [[ $# -gt 0 ]]; do
     --realm) REALM="$2"; shift 2 ;;
     --username) USERNAME="$2"; shift 2 ;;
     --password) PASSWORD="$2"; shift 2 ;;
+    --keycloak-admin-username) KEYCLOAK_ADMIN_USERNAME="$2"; shift 2 ;;
+    --keycloak-admin-password) KEYCLOAK_ADMIN_PASSWORD="$2"; shift 2 ;;
     --timeout-sec)     TIMEOUT_SEC="$2"; shift 2 ;;
     -h|--help)         usage; exit 0 ;;
     *) echo "Unknown arg: $1"; usage; exit 2 ;;
@@ -220,5 +228,54 @@ run_test_script \
   --keycloak-base-url "${KEYCLOAK_BASE_URL}" \
   --username "${USERNAME}" \
   --password "${PASSWORD}"
+
+run_test_script \
+  "matchmaking-join-idempotency" \
+  "${SCRIPT_DIR}/tests/matchmaking-join-idempotency.sh" \
+  --base-url "${BASE_URL}" \
+  --keycloak-base-url "${KEYCLOAK_BASE_URL}" \
+  --username "${USERNAME}" \
+  --password "${PASSWORD}"
+
+run_test_script \
+  "matchmaking-cancel-idempotency" \
+  "${SCRIPT_DIR}/tests/matchmaking-cancel-idempotency.sh" \
+  --base-url "${BASE_URL}" \
+  --keycloak-base-url "${KEYCLOAK_BASE_URL}" \
+  --username "${USERNAME}" \
+  --password "${PASSWORD}"
+
+run_test_script \
+  "matchmaking-ttl-expired" \
+  "${SCRIPT_DIR}/tests/matchmaking-ttl-expired.sh" \
+  --base-url "${BASE_URL}" \
+  --keycloak-base-url "${KEYCLOAK_BASE_URL}" \
+  --username "${USERNAME}" \
+  --password "${PASSWORD}" \
+  --timeout-sec "${TIMEOUT_SEC}"
+
+run_test_script \
+  "matchmaking-ticket-ownership" \
+  "${SCRIPT_DIR}/tests/matchmaking-ticket-ownership.sh" \
+  --base-url "${BASE_URL}" \
+  --keycloak-base-url "${KEYCLOAK_BASE_URL}" \
+  --realm "${REALM}" \
+  --username "${USERNAME}" \
+  --password "${PASSWORD}" \
+  --keycloak-admin-username "${KEYCLOAK_ADMIN_USERNAME}" \
+  --keycloak-admin-password "${KEYCLOAK_ADMIN_PASSWORD}"
+
+run_test_script \
+  "matchmaking-match-notification-pipeline" \
+  "${SCRIPT_DIR}/tests/matchmaking-match-notification-pipeline.sh" \
+  --base-url "${BASE_URL}" \
+  --keycloak-base-url "${KEYCLOAK_BASE_URL}" \
+  --realm "${REALM}" \
+  --username "${USERNAME}" \
+  --password "${PASSWORD}" \
+  --keycloak-admin-username "${KEYCLOAK_ADMIN_USERNAME}" \
+  --keycloak-admin-password "${KEYCLOAK_ADMIN_PASSWORD}" \
+  --namespace "${NAMESPACE}" \
+  --timeout-sec "${TIMEOUT_SEC}"
 
 echo "=== All E2E tests passed ==="
