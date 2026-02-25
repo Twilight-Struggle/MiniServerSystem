@@ -182,6 +182,9 @@
 - Istio `VirtualService` で `gateway-bff -> account` に timeout（既定 `1s`）を設定し、遅延時に早期失敗させる
 - Istio retry は `GET /users/{userId}` と冪等な `POST /identities:resolve` に限定して適用する
 - Istio `DestinationRule` で `gateway-bff -> account` に connectionPool / outlierDetection を設定する
+- Istio `VirtualService` で `gateway-bff -> matchmaking` に timeout（既定 `10s`）を設定し、`Matchmaking SLI-B (p95<10s)` の観点で上限を揃える
+- Istio retry は `GET/DELETE /v1/matchmaking/tickets/{ticketId}` の冪等操作に限定し、`POST /v1/matchmaking/queues/{mode}/tickets` には適用しない
+- Istio `DestinationRule` で `gateway-bff -> matchmaking` に connectionPool / outlierDetection を設定し、簡易な CB を mesh 層で有効化する
 
 ## 9. デプロイと設定
 
@@ -222,7 +225,7 @@ account 側:
 ## 11. 既知のギャップ
 
 - `/v1/users/{userId}/profile` は現時点で実データ集約未実装（プレースホルダー）
-- gateway-bff → account のアプリレイヤーCB（Resilience4j 等）は未導入（Istioのtimeout/retry/connectionPool/outlierDetectionは導入済み）
+- gateway-bff → account / matchmaking のアプリレイヤーCB（Resilience4j 等）は未導入（Istioのtimeout/retry/connectionPool/outlierDetectionは導入済み）
 - 内部 API は Istio mTLS(STRICT) + AuthorizationPolicy でゼロトラスト化し、共有トークン方式はアプリレイヤーの追加ガードとして併用する
 - Matchmaking は `/` の最小疎通エンドポイントのみで、キュー参加/マッチ成立ドメインは未実装
 

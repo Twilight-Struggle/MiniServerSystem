@@ -1,0 +1,75 @@
+{{- /*
+Where: deploy/helm/miniserversystem-platform/templates/istio-gateway-matchmaking-virtualservice.yaml
+What: VirtualService timeout/retry policy for gateway-bff -> matchmaking internal calls.
+Why: Bound downstream latency and retry only idempotent operations for matchmaking.
+*/ -}}
+{{- if .Values.istio.enabled }}
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: gateway-matchmaking-timeout
+spec:
+  hosts:
+    - matchmaking.{{ .Release.Namespace }}.svc.cluster.local
+  http:
+    - name: gateway-to-matchmaking-get-ticket
+      match:
+        - sourceLabels:
+            app: gateway
+          method:
+            exact: GET
+          uri:
+            prefix: /v1/matchmaking/tickets/
+      timeout: {{ default "10s" .Values.istio.gatewayToMatchmakingTimeout | quote }}
+      retries:
+        attempts: {{ default 2 .Values.istio.gatewayToMatchmakingRetry.attempts }}
+        perTryTimeout: {{ default "3s" .Values.istio.gatewayToMatchmakingRetry.perTryTimeout | quote }}
+        retryOn: {{ default "connect-failure,refused-stream,unavailable,cancelled" .Values.istio.gatewayToMatchmakingRetry.retryOn | quote }}
+      route:
+        - destination:
+            host: matchmaking.{{ .Release.Namespace }}.svc.cluster.local
+            port:
+              number: 80
+    - name: gateway-to-matchmaking-cancel-ticket
+      match:
+        - sourceLabels:
+            app: gateway
+          method:
+            exact: DELETE
+          uri:
+            prefix: /v1/matchmaking/tickets/
+      timeout: {{ default "10s" .Values.istio.gatewayToMatchmakingTimeout | quote }}
+      retries:
+        attempts: {{ default 2 .Values.istio.gatewayToMatchmakingRetry.attempts }}
+        perTryTimeout: {{ default "3s" .Values.istio.gatewayToMatchmakingRetry.perTryTimeout | quote }}
+        retryOn: {{ default "connect-failure,refused-stream,unavailable,cancelled" .Values.istio.gatewayToMatchmakingRetry.retryOn | quote }}
+      route:
+        - destination:
+            host: matchmaking.{{ .Release.Namespace }}.svc.cluster.local
+            port:
+              number: 80
+    - name: gateway-to-matchmaking-join-ticket
+      match:
+        - sourceLabels:
+            app: gateway
+          method:
+            exact: POST
+          uri:
+            prefix: /v1/matchmaking/queues/
+      timeout: {{ default "10s" .Values.istio.gatewayToMatchmakingTimeout | quote }}
+      route:
+        - destination:
+            host: matchmaking.{{ .Release.Namespace }}.svc.cluster.local
+            port:
+              number: 80
+    - name: gateway-to-matchmaking-default
+      match:
+        - sourceLabels:
+            app: gateway
+      timeout: {{ default "10s" .Values.istio.gatewayToMatchmakingTimeout | quote }}
+      route:
+        - destination:
+            host: matchmaking.{{ .Release.Namespace }}.svc.cluster.local
+            port:
+              number: 80
+{{- end }}
