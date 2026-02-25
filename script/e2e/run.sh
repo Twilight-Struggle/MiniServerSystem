@@ -22,8 +22,8 @@ ENTITLEMENT_REMOTE_PORT="80"
 REALM="miniserversystem"
 USERNAME="test"
 PASSWORD="test"
-KEYCLOAK_ADMIN_USERNAME="admin"
-KEYCLOAK_ADMIN_PASSWORD="admin"
+SECOND_USERNAME="test2"
+SECOND_PASSWORD="test"
 TIMEOUT_SEC="120"
 
 usage() {
@@ -51,10 +51,8 @@ Options:
   --realm <name>          Keycloak realm name (default: ${REALM})
   --username <name>       Keycloak test user (default: ${USERNAME})
   --password <pw>         Keycloak test password (default: ${PASSWORD})
-  --keycloak-admin-username <name>
-                          Keycloak admin user for E2E fixture setup (default: ${KEYCLOAK_ADMIN_USERNAME})
-  --keycloak-admin-password <pw>
-                          Keycloak admin password for E2E fixture setup (default: ${KEYCLOAK_ADMIN_PASSWORD})
+  --second-username <name> Secondary Keycloak test user (default: ${SECOND_USERNAME})
+  --second-password <pw>   Secondary Keycloak test password (default: ${SECOND_PASSWORD})
   --timeout-sec <sec>     Wait timeout for readiness (default: ${TIMEOUT_SEC})
 EOF
 }
@@ -75,8 +73,8 @@ while [[ $# -gt 0 ]]; do
     --realm) REALM="$2"; shift 2 ;;
     --username) USERNAME="$2"; shift 2 ;;
     --password) PASSWORD="$2"; shift 2 ;;
-    --keycloak-admin-username) KEYCLOAK_ADMIN_USERNAME="$2"; shift 2 ;;
-    --keycloak-admin-password) KEYCLOAK_ADMIN_PASSWORD="$2"; shift 2 ;;
+    --second-username) SECOND_USERNAME="$2"; shift 2 ;;
+    --second-password) SECOND_PASSWORD="$2"; shift 2 ;;
     --timeout-sec)     TIMEOUT_SEC="$2"; shift 2 ;;
     -h|--help)         usage; exit 0 ;;
     *) echo "Unknown arg: $1"; usage; exit 2 ;;
@@ -126,7 +124,7 @@ dump_diagnostics() {
   fi
 
   # 主要 deploy のログ（必要に応じて増やす）
-  for d in gateway account entitlement matchmaking notification nats; do
+  for d in gateway keycloak account entitlement matchmaking notification nats; do
     echo "--- logs: deploy/${d} (tail=200) ---" >&2
     kubectl -n "${NAMESPACE}" logs "deploy/${d}" --all-containers=true --tail=200 || true
   done
@@ -262,8 +260,8 @@ run_test_script \
   --realm "${REALM}" \
   --username "${USERNAME}" \
   --password "${PASSWORD}" \
-  --keycloak-admin-username "${KEYCLOAK_ADMIN_USERNAME}" \
-  --keycloak-admin-password "${KEYCLOAK_ADMIN_PASSWORD}"
+  --second-username "${SECOND_USERNAME}" \
+  --second-password "${SECOND_PASSWORD}"
 
 run_test_script \
   "matchmaking-match-notification-pipeline" \
@@ -273,8 +271,8 @@ run_test_script \
   --realm "${REALM}" \
   --username "${USERNAME}" \
   --password "${PASSWORD}" \
-  --keycloak-admin-username "${KEYCLOAK_ADMIN_USERNAME}" \
-  --keycloak-admin-password "${KEYCLOAK_ADMIN_PASSWORD}" \
+  --second-username "${SECOND_USERNAME}" \
+  --second-password "${SECOND_PASSWORD}" \
   --namespace "${NAMESPACE}" \
   --timeout-sec "${TIMEOUT_SEC}"
 

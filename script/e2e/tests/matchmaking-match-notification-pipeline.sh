@@ -13,15 +13,17 @@ KEYCLOAK_BASE_URL=""
 REALM="miniserversystem"
 USERNAME="test"
 PASSWORD="test"
-KEYCLOAK_ADMIN_USERNAME="admin"
-KEYCLOAK_ADMIN_PASSWORD="admin"
+SECOND_USERNAME="test2"
+SECOND_PASSWORD="test"
 NAMESPACE="miniserversystem"
 POSTGRES_STATEFULSET="postgres"
 POSTGRES_CONTAINER="postgres"
 POSTGRES_DB="miniserversystem"
 POSTGRES_USER="miniserversystem"
 POSTGRES_PASSWORD="miniserversystem"
-MODE="casual"
+REDIS_DEPLOYMENT="redis"
+REDIS_CONTAINER="redis"
+MODE="rank"
 TIMEOUT_SEC="120"
 POLL_INTERVAL_SEC="2"
 
@@ -35,14 +37,16 @@ Options:
   --realm <name>                   Keycloak realm name (default: ${REALM})
   --username <name>                Primary user username (default: ${USERNAME})
   --password <pw>                  Primary user password (default: ${PASSWORD})
-  --keycloak-admin-username <name> Keycloak admin username (default: ${KEYCLOAK_ADMIN_USERNAME})
-  --keycloak-admin-password <pw>   Keycloak admin password (default: ${KEYCLOAK_ADMIN_PASSWORD})
+  --second-username <name>         Secondary user username (default: ${SECOND_USERNAME})
+  --second-password <pw>           Secondary user password (default: ${SECOND_PASSWORD})
   --namespace <ns>                 Kubernetes namespace (default: ${NAMESPACE})
   --postgres-statefulset <name>    Postgres StatefulSet name (default: ${POSTGRES_STATEFULSET})
   --postgres-container <name>      Postgres container name (default: ${POSTGRES_CONTAINER})
   --postgres-db <name>             Postgres DB name (default: ${POSTGRES_DB})
   --postgres-user <name>           Postgres user (default: ${POSTGRES_USER})
   --postgres-password <pw>         Postgres password (default: ${POSTGRES_PASSWORD})
+  --redis-deployment <name>        Redis Deployment name (default: ${REDIS_DEPLOYMENT})
+  --redis-container <name>         Redis container name (default: ${REDIS_CONTAINER})
   --mode <mode>                    Matchmaking mode (default: ${MODE})
   --timeout-sec <sec>              Poll timeout in seconds (default: ${TIMEOUT_SEC})
   --poll-interval-sec <sec>        Poll interval in seconds (default: ${POLL_INTERVAL_SEC})
@@ -56,14 +60,16 @@ while [[ $# -gt 0 ]]; do
     --realm) REALM="$2"; shift 2 ;;
     --username) USERNAME="$2"; shift 2 ;;
     --password) PASSWORD="$2"; shift 2 ;;
-    --keycloak-admin-username) KEYCLOAK_ADMIN_USERNAME="$2"; shift 2 ;;
-    --keycloak-admin-password) KEYCLOAK_ADMIN_PASSWORD="$2"; shift 2 ;;
+    --second-username) SECOND_USERNAME="$2"; shift 2 ;;
+    --second-password) SECOND_PASSWORD="$2"; shift 2 ;;
     --namespace) NAMESPACE="$2"; shift 2 ;;
     --postgres-statefulset) POSTGRES_STATEFULSET="$2"; shift 2 ;;
     --postgres-container) POSTGRES_CONTAINER="$2"; shift 2 ;;
     --postgres-db) POSTGRES_DB="$2"; shift 2 ;;
     --postgres-user) POSTGRES_USER="$2"; shift 2 ;;
     --postgres-password) POSTGRES_PASSWORD="$2"; shift 2 ;;
+    --redis-deployment) REDIS_DEPLOYMENT="$2"; shift 2 ;;
+    --redis-container) REDIS_CONTAINER="$2"; shift 2 ;;
     --mode) MODE="$2"; shift 2 ;;
     --timeout-sec) TIMEOUT_SEC="$2"; shift 2 ;;
     --poll-interval-sec) POLL_INTERVAL_SEC="$2"; shift 2 ;;
@@ -84,19 +90,9 @@ require_cmd kubectl
 KEYCLOAK_AUTHORITY="${KEYCLOAK_BASE_URL#http://}"
 KEYCLOAK_AUTHORITY="${KEYCLOAK_AUTHORITY#https://}"
 KEYCLOAK_AUTHORITY="${KEYCLOAK_AUTHORITY%%/*}"
-KEYCLOAK_HOST="${KEYCLOAK_AUTHORITY%%:*}"
-KEYCLOAK_PORT="${KEYCLOAK_AUTHORITY##*:}"
-KEYCLOAK_RESOLVE_ARGS=()
-if [[ "${KEYCLOAK_HOST}" != "127.0.0.1" && "${KEYCLOAK_HOST}" != "localhost" ]]; then
-  KEYCLOAK_RESOLVE_ARGS=(--resolve "${KEYCLOAK_HOST}:${KEYCLOAK_PORT}:127.0.0.1")
-fi
 
 COOKIE_USER1="$(mktemp)"
 COOKIE_USER2="$(mktemp)"
-ADMIN_TOKEN_BODY="$(mktemp)"
-CREATE_USER_BODY="$(mktemp)"
-CREATE_USER_HEADERS="$(mktemp)"
-RESET_PASSWORD_BODY="$(mktemp)"
 JOIN_BODY_1="$(mktemp)"
 JOIN_BODY_2="$(mktemp)"
 STATUS_BODY_1="$(mktemp)"
@@ -104,7 +100,6 @@ STATUS_BODY_2="$(mktemp)"
 cleanup() {
   rm -f \
     "${COOKIE_USER1}" "${COOKIE_USER2}" \
-    "${ADMIN_TOKEN_BODY}" "${CREATE_USER_BODY}" "${CREATE_USER_HEADERS}" "${RESET_PASSWORD_BODY}" \
     "${JOIN_BODY_1}" "${JOIN_BODY_2}" "${STATUS_BODY_1}" "${STATUS_BODY_2}" || true
 }
 trap cleanup EXIT
@@ -116,84 +111,60 @@ query_postgres() {
     psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -t -A -c "${sql}" | tr -d '\r'
 }
 
+query_redis() {
+  kubectl -n "${NAMESPACE}" exec "deploy/${REDIS_DEPLOYMENT}" -c "${REDIS_CONTAINER}" -- "$@" \
+    | tr -d '\r'
+}
+
+dump_ticket_debug() {
+  local label="$1"
+  local ticket_id="$2"
+  if [[ -z "${ticket_id}" ]]; then
+    echo "--- ${label}: ticket_id is empty ---" >&2
+    return 0
+  fi
+  local ticket_key="mm:ticket:${ticket_id}"
+  local queue_key="mm:queue:${MODE}"
+  echo "--- ${label}: ticket_id=${ticket_id} key=${ticket_key} ---" >&2
+  echo "redis EXISTS => $(query_redis redis-cli --raw EXISTS "${ticket_key}" 2>/dev/null || echo "<redis-query-failed>")" >&2
+  echo "redis TTL    => $(query_redis redis-cli --raw TTL "${ticket_key}" 2>/dev/null || echo "<redis-query-failed>")" >&2
+  echo "redis ZSCORE queue=${queue_key} => $(query_redis redis-cli --raw ZSCORE "${queue_key}" "${ticket_id}" 2>/dev/null || echo "<redis-query-failed>")" >&2
+  echo "redis HGETALL =>" >&2
+  query_redis redis-cli --raw HGETALL "${ticket_key}" 2>/dev/null >&2 || echo "<redis-query-failed>" >&2
+}
+
+dump_queue_debug() {
+  local queue_key="mm:queue:${MODE}"
+  echo "--- queue debug: ${queue_key} ---" >&2
+  echo "redis ZCARD => $(query_redis redis-cli --raw ZCARD "${queue_key}" 2>/dev/null || echo "<redis-query-failed>")" >&2
+  echo "redis ZRANGE 0 20 WITHSCORES =>" >&2
+  query_redis redis-cli --raw ZRANGE "${queue_key}" 0 20 WITHSCORES 2>/dev/null >&2 || echo "<redis-query-failed>" >&2
+}
+
+dump_status_failure_diagnostics() {
+  echo "=== Diagnostics: matchmaking status lookup failed ===" >&2
+  echo "join1=$(cat "${JOIN_BODY_1}")" >&2
+  echo "join2=$(cat "${JOIN_BODY_2}")" >&2
+  echo "status1=$(cat "${STATUS_BODY_1}")" >&2
+  echo "status2=$(cat "${STATUS_BODY_2}")" >&2
+  dump_ticket_debug "user1" "${TICKET_ID_1:-}"
+  dump_ticket_debug "user2" "${TICKET_ID_2:-}"
+  dump_queue_debug
+  echo "--- kubectl get pods (app in {matchmaking,redis}) ---" >&2
+  kubectl -n "${NAMESPACE}" get pods -l app=matchmaking -o wide >&2 || true
+  kubectl -n "${NAMESPACE}" get pods -l app=redis -o wide >&2 || true
+  echo "--- logs: deploy/matchmaking (tail=200) ---" >&2
+  kubectl -n "${NAMESPACE}" logs deploy/matchmaking --tail=200 >&2 || true
+  echo "--- env: deploy/matchmaking (MATCHMAKING_*) ---" >&2
+  kubectl -n "${NAMESPACE}" exec deploy/matchmaking -- sh -c 'printenv | sort | grep "^MATCHMAKING_"' >&2 || true
+  echo "--- env: deploy/matchmaking (SPRING_PROFILES_ACTIVE) ---" >&2
+  kubectl -n "${NAMESPACE}" exec deploy/matchmaking -- sh -c 'printenv | sort | grep "^SPRING_PROFILES_ACTIVE="' >&2 || true
+  echo "--- logs: deploy/redis (tail=100) ---" >&2
+  kubectl -n "${NAMESPACE}" logs "deploy/${REDIS_DEPLOYMENT}" -c "${REDIS_CONTAINER}" --tail=100 >&2 || true
+}
+
 extract_match_id_from_status_json() {
   perl -0777 -ne 'if (/"matched"\s*:\s*\{[^}]*"match_id"\s*:\s*"([^"]+)"/s) { print $1; }'
-}
-
-request_keycloak_admin_token() {
-  local token_url="${KEYCLOAK_BASE_URL}/realms/master/protocol/openid-connect/token"
-  local code
-  code="$(
-    curl -sS -o "${ADMIN_TOKEN_BODY}" -w "%{http_code}" \
-      "${KEYCLOAK_RESOLVE_ARGS[@]}" \
-      -X POST "${token_url}" \
-      -H "Content-Type: application/x-www-form-urlencoded" \
-      --data-urlencode "grant_type=password" \
-      --data-urlencode "client_id=admin-cli" \
-      --data-urlencode "username=${KEYCLOAK_ADMIN_USERNAME}" \
-      --data-urlencode "password=${KEYCLOAK_ADMIN_PASSWORD}"
-  )"
-  if [[ "${code}" != "200" ]]; then
-    echo "ERROR: failed to get Keycloak admin token (status=${code})" >&2
-    echo "response=$(cat "${ADMIN_TOKEN_BODY}")" >&2
-    return 1
-  fi
-  extract_json_field "$(cat "${ADMIN_TOKEN_BODY}")" "access_token"
-}
-
-create_ephemeral_user() {
-  local admin_token="$1"
-  local username="$2"
-  local password="$3"
-  local payload
-  payload="$(cat <<EOF
-{"username":"${username}","enabled":true,"emailVerified":true}
-EOF
-)"
-  local code
-  code="$(
-    curl -sS -o "${CREATE_USER_BODY}" -D "${CREATE_USER_HEADERS}" -w "%{http_code}" \
-      "${KEYCLOAK_RESOLVE_ARGS[@]}" \
-      -X POST "${KEYCLOAK_BASE_URL}/admin/realms/${REALM}/users" \
-      -H "Authorization: Bearer ${admin_token}" \
-      -H "Content-Type: application/json" \
-      -d "${payload}"
-  )"
-  if [[ "${code}" != "201" ]]; then
-    echo "ERROR: failed to create Keycloak user (status=${code})" >&2
-    echo "response=$(cat "${CREATE_USER_BODY}")" >&2
-    return 1
-  fi
-
-  local user_location
-  local user_id
-  user_location="$(extract_header_value "${CREATE_USER_HEADERS}" "Location")"
-  user_id="$(printf '%s' "${user_location}" | sed -n 's#.*/users/\([^/?]*\).*#\1#p')"
-  if [[ -z "${user_id}" ]]; then
-    echo "ERROR: failed to parse created Keycloak user id from Location header" >&2
-    echo "location=${user_location}" >&2
-    return 1
-  fi
-
-  local reset_payload
-  reset_payload="$(cat <<EOF
-{"type":"password","value":"${password}","temporary":false}
-EOF
-)"
-  local reset_code
-  reset_code="$(
-    curl -sS -o "${RESET_PASSWORD_BODY}" -w "%{http_code}" \
-      "${KEYCLOAK_RESOLVE_ARGS[@]}" \
-      -X PUT "${KEYCLOAK_BASE_URL}/admin/realms/${REALM}/users/${user_id}/reset-password" \
-      -H "Authorization: Bearer ${admin_token}" \
-      -H "Content-Type: application/json" \
-      -d "${reset_payload}"
-  )"
-  if [[ "${reset_code}" != "204" ]]; then
-    echo "ERROR: failed to reset Keycloak user password (status=${reset_code})" >&2
-    echo "response=$(cat "${RESET_PASSWORD_BODY}")" >&2
-    return 1
-  fi
 }
 
 join_ticket() {
@@ -224,16 +195,8 @@ get_status() {
 echo "=== OIDC login for primary user ==="
 oidc_login "${BASE_URL}" "${KEYCLOAK_BASE_URL}" "${USERNAME}" "${PASSWORD}" "${COOKIE_USER1}"
 
-echo "=== Creating and logging in secondary user ==="
-ADMIN_TOKEN="$(request_keycloak_admin_token)"
-if [[ -z "${ADMIN_TOKEN}" ]]; then
-  echo "ERROR: admin access_token is empty" >&2
-  exit 1
-fi
-SECONDARY_USERNAME="e2e-mm-pair-$(date +%s)-${RANDOM}"
-SECONDARY_PASSWORD="test"
-create_ephemeral_user "${ADMIN_TOKEN}" "${SECONDARY_USERNAME}" "${SECONDARY_PASSWORD}"
-oidc_login "${BASE_URL}" "${KEYCLOAK_BASE_URL}" "${SECONDARY_USERNAME}" "${SECONDARY_PASSWORD}" "${COOKIE_USER2}"
+echo "=== OIDC login for secondary user ==="
+oidc_login "${BASE_URL}" "${KEYCLOAK_BASE_URL}" "${SECOND_USERNAME}" "${SECOND_PASSWORD}" "${COOKIE_USER2}"
 
 IDEMPOTENCY_KEY_1="e2e-mm-match-1-$(date +%s)-${RANDOM}"
 IDEMPOTENCY_KEY_2="e2e-mm-match-2-$(date +%s)-${RANDOM}"
@@ -266,8 +229,7 @@ while [[ ${SECONDS} -lt ${END} ]]; do
   STATUS_CODE_2="$(get_status "${COOKIE_USER2}" "${TICKET_ID_2}" "${STATUS_BODY_2}")"
   if [[ "${STATUS_CODE_1}" != "200" || "${STATUS_CODE_2}" != "200" ]]; then
     echo "ERROR: status check failed (user1=${STATUS_CODE_1}, user2=${STATUS_CODE_2})" >&2
-    echo "status1=$(cat "${STATUS_BODY_1}")" >&2
-    echo "status2=$(cat "${STATUS_BODY_2}")" >&2
+    dump_status_failure_diagnostics
     exit 1
   fi
   STATUS_1="$(extract_json_field "$(cat "${STATUS_BODY_1}")" "status")"
@@ -297,7 +259,7 @@ PROCESSED_EXISTS="f"
 END=$((SECONDS + TIMEOUT_SEC))
 while [[ ${SECONDS} -lt ${END} ]]; do
   EVENT_ID="$(
-    query_postgres "SELECT event_id::text FROM notification.notifications WHERE type = 'MatchFound' AND payload::text LIKE '%\"match_id\":\"${MATCH_ID}\"%' ORDER BY created_at DESC LIMIT 1;" \
+    query_postgres "SELECT event_id::text FROM notification.notifications WHERE type = 'MatchFound' AND payload_json @> '{\"match_id\":\"${MATCH_ID}\"}'::jsonb ORDER BY created_at DESC LIMIT 1;" \
       | head -n1 | tr -d '[:space:]'
   )"
   if [[ -n "${EVENT_ID}" ]]; then
@@ -314,7 +276,7 @@ done
 
 if [[ -z "${EVENT_ID}" ]]; then
   echo "ERROR: MatchFound notification not found for match_id=${MATCH_ID}" >&2
-  query_postgres "SELECT notification_id::text, event_id::text, type, payload, status FROM notification.notifications WHERE type='MatchFound' ORDER BY created_at DESC LIMIT 20;"
+  query_postgres "SELECT notification_id::text, event_id::text, type, payload_json::text, status FROM notification.notifications WHERE type='MatchFound' ORDER BY created_at DESC LIMIT 20;"
   exit 1
 fi
 

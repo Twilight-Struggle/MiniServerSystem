@@ -48,6 +48,21 @@ data:
               "temporary": false
             }
           ]
+        },
+        {
+          "username": "test2",
+          "enabled": true,
+          "emailVerified": true,
+          "firstName": "E2E",
+          "lastName": "User2",
+          "email": "test2@example.com",
+          "credentials": [
+            {
+              "type": "password",
+              "value": "test",
+              "temporary": false
+            }
+          ]
         }
       ]
     }
