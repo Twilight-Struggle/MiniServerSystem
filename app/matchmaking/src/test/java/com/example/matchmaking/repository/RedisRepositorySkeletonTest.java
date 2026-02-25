@@ -10,15 +10,18 @@ import com.example.matchmaking.model.MatchMode;
 import com.example.matchmaking.model.TicketStatus;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.data.redis.core.ZSetOperations;
+import org.springframework.data.redis.core.script.RedisScript;
 
 class RedisRepositorySkeletonTest {
 
@@ -50,7 +53,9 @@ class RedisRepositorySkeletonTest {
     assertThat(ticket.userId()).isEqualTo("user-1");
     assertThat(ticket.mode()).isEqualTo(MatchMode.CASUAL);
     assertThat(ticket.status()).isEqualTo(TicketStatus.QUEUED);
-    verify(hashOps).putAll(eq("mm:ticket:" + ticket.ticketId()), any(Map.class));
+    final ArgumentCaptor<Map<String, String>> fieldsCaptor = ArgumentCaptor.forClass(Map.class);
+    verify(hashOps).putAll(eq("mm:ticket:" + ticket.ticketId()), fieldsCaptor.capture());
+    assertThat(fieldsCaptor.getValue()).containsKey("expires_at_epoch_millis");
     verify(zSetOps).add(eq("mm:queue:casual"), eq(ticket.ticketId()), any(Double.class));
   }
 
@@ -143,19 +148,10 @@ class RedisRepositorySkeletonTest {
   @Test
   void matchRepositoryMarksMatchedForTwoQueuedTickets() {
     final StringRedisTemplate redisTemplate = Mockito.mock(StringRedisTemplate.class);
-    final ZSetOperations<String, String> zSetOps = Mockito.mock(ZSetOperations.class);
-    final HashOperations<String, Object, Object> hashOps = Mockito.mock(HashOperations.class);
-    when(redisTemplate.opsForZSet()).thenReturn(zSetOps);
-    when(redisTemplate.opsForHash()).thenReturn(hashOps);
-    when(zSetOps.popMin("mm:queue:casual"))
-        .thenReturn(new org.springframework.data.redis.core.DefaultTypedTuple<>("ticket-1", 1.0))
-        .thenReturn(new org.springframework.data.redis.core.DefaultTypedTuple<>("ticket-2", 2.0));
-    when(hashOps.entries("mm:ticket:ticket-1"))
-        .thenReturn(
-            Map.of("status", "QUEUED", "expires_at", Instant.now().plusSeconds(30).toString()));
-    when(hashOps.entries("mm:ticket:ticket-2"))
-        .thenReturn(
-            Map.of("status", "QUEUED", "expires_at", Instant.now().plusSeconds(30).toString()));
+    final List<Object> scriptResult = List.of("matched", "ticket-1", "ticket-2", "match-1");
+    Mockito.doReturn(scriptResult)
+        .when(redisTemplate)
+        .execute(Mockito.<RedisScript<List>>any(), eq(List.of("mm:queue:casual")), any(), any());
 
     final RedisLuaMatchmakingMatchRepository repository =
         new RedisLuaMatchmakingMatchRepository(redisTemplate);
@@ -165,24 +161,18 @@ class RedisRepositorySkeletonTest {
 
     assertThat(result).isPresent();
     assertThat(result.get().mode()).isEqualTo(MatchMode.CASUAL);
-    verify(hashOps).put(eq("mm:ticket:ticket-1"), eq("status"), eq("MATCHED"));
-    verify(hashOps).put(eq("mm:ticket:ticket-2"), eq("status"), eq("MATCHED"));
+    assertThat(result.get().ticketId1()).isEqualTo("ticket-1");
+    assertThat(result.get().ticketId2()).isEqualTo("ticket-2");
+    assertThat(result.get().matchId()).isEqualTo("match-1");
   }
 
   @SuppressWarnings("unchecked")
   @Test
   void matchRepositoryReturnsEmptyWhenInsufficientQueuedTickets() {
     final StringRedisTemplate redisTemplate = Mockito.mock(StringRedisTemplate.class);
-    final ZSetOperations<String, String> zSetOps = Mockito.mock(ZSetOperations.class);
-    final HashOperations<String, Object, Object> hashOps = Mockito.mock(HashOperations.class);
-    when(redisTemplate.opsForZSet()).thenReturn(zSetOps);
-    when(redisTemplate.opsForHash()).thenReturn(hashOps);
-    when(zSetOps.popMin("mm:queue:casual"))
-        .thenReturn(new org.springframework.data.redis.core.DefaultTypedTuple<>("ticket-1", 1.0))
-        .thenReturn(null);
-    when(hashOps.entries("mm:ticket:ticket-1"))
-        .thenReturn(
-            Map.of("status", "QUEUED", "expires_at", Instant.now().plusSeconds(30).toString()));
+    Mockito.doReturn(List.of("no_match"))
+        .when(redisTemplate)
+        .execute(Mockito.<RedisScript<List>>any(), eq(List.of("mm:queue:casual")), any(), any());
 
     final RedisLuaMatchmakingMatchRepository repository =
         new RedisLuaMatchmakingMatchRepository(redisTemplate);

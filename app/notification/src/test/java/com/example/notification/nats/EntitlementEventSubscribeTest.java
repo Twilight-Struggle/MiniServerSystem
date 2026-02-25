@@ -18,7 +18,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.notification.config.NotificationNatsProperties;
-import com.example.notification.service.NotificationEventHandler;
+import com.example.notification.service.EntitlementEventHandler;
 import com.example.notification.service.NotificationEventPermanentException;
 import com.example.proto.entitlement.EntitlementEvent;
 import io.nats.client.Connection;
@@ -65,7 +65,7 @@ class EntitlementEventSubscribeTest {
 
   @Mock private JetStreamSubscription subscription;
 
-  @Mock private NotificationEventHandler eventHandler;
+  @Mock private EntitlementEventHandler eventHandler;
 
   @Captor private ArgumentCaptor<MessageHandler> handlerCaptor;
 

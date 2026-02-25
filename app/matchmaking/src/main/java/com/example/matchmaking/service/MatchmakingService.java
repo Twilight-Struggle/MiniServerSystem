@@ -64,12 +64,12 @@ public class MatchmakingService {
 
   public CancelMatchmakingTicketResponse cancelTicket(String ticketId, String userId) {
     validateTicketIdAndUserId(ticketId, userId);
-    final TicketRecord record =
+    requireOwnedTicket(ticketId, userId);
+    final TicketRecord cancelled =
         ticketRepository
             .cancelTicket(ticketId)
             .orElseThrow(() -> new TicketNotFoundException(ticketId));
-    ensureOwner(record, userId);
-    return new CancelMatchmakingTicketResponse(record.ticketId(), record.status().name());
+    return new CancelMatchmakingTicketResponse(cancelled.ticketId(), cancelled.status().name());
   }
 
   private MatchMode validateJoinRequest(
@@ -77,7 +77,7 @@ public class MatchmakingService {
     if (mode == null || mode.isBlank()) {
       throw new InvalidMatchmakingRequestException("mode is required");
     }
-    final MatchMode matchMode = MatchMode.fromValue(mode);
+    final MatchMode matchMode = parseMode(mode);
     if (userId == null || userId.isBlank()) {
       throw new InvalidMatchmakingRequestException("userId is required");
     }
@@ -91,6 +91,14 @@ public class MatchmakingService {
       throw new InvalidMatchmakingRequestException("idempotency_key is required");
     }
     return matchMode;
+  }
+
+  private MatchMode parseMode(String mode) {
+    try {
+      return MatchMode.fromValue(mode);
+    } catch (IllegalArgumentException ex) {
+      throw new InvalidMatchmakingRequestException(ex.getMessage());
+    }
   }
 
   private void validateTicketIdAndUserId(String ticketId, String userId) {

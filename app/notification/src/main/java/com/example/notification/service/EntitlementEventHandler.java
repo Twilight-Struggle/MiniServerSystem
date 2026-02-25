@@ -24,9 +24,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-public class NotificationEventHandler {
+public class EntitlementEventHandler {
 
-  private static final Logger logger = LoggerFactory.getLogger(NotificationEventHandler.class);
+  private static final Logger logger = LoggerFactory.getLogger(EntitlementEventHandler.class);
 
   private final ProcessedEventRepository processedEventRepository;
   private final NotificationRepository notificationRepository;

@@ -23,6 +23,7 @@ public class RedisMatchmakingTicketRepository implements MatchmakingTicketReposi
   private static final String FIELD_STATUS = "status";
   private static final String FIELD_CREATED_AT = "created_at";
   private static final String FIELD_EXPIRES_AT = "expires_at";
+  private static final String FIELD_EXPIRES_AT_EPOCH_MILLIS = "expires_at_epoch_millis";
   private static final String FIELD_ATTRIBUTES = "attributes";
   private static final String FIELD_MATCH_ID = "match_id";
 
@@ -64,6 +65,7 @@ public class RedisMatchmakingTicketRepository implements MatchmakingTicketReposi
     fields.put(FIELD_STATUS, TicketStatus.QUEUED.name());
     fields.put(FIELD_CREATED_AT, now.toString());
     fields.put(FIELD_EXPIRES_AT, expiresAt.toString());
+    fields.put(FIELD_EXPIRES_AT_EPOCH_MILLIS, String.valueOf(expiresAt.toEpochMilli()));
     fields.put(FIELD_ATTRIBUTES, attributesJson == null ? "{}" : attributesJson);
 
     redisTemplate.opsForHash().putAll(ticketKey, fields);

@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.matchmaking.api.InvalidMatchmakingRequestException;
@@ -55,6 +57,16 @@ class MatchmakingServiceTest {
     assertThatThrownBy(() -> service.join("casual", "user-1", request))
         .isInstanceOf(InvalidMatchmakingRequestException.class)
         .hasMessageContaining("idempotency_key is required");
+  }
+
+  @Test
+  void joinThrowsWhenModeUnsupported() {
+    final JoinMatchmakingTicketRequest request =
+        new JoinMatchmakingTicketRequest(1, Map.of(), "idem-1");
+
+    assertThatThrownBy(() -> service.join("unknown", "user-1", request))
+        .isInstanceOf(InvalidMatchmakingRequestException.class)
+        .hasMessageContaining("unsupported mode");
   }
 
   @Test
@@ -140,7 +152,7 @@ class MatchmakingServiceTest {
 
   @Test
   void cancelTicketThrowsWhenOwnerMismatch() {
-    when(repository.cancelTicket("ticket-1"))
+    when(repository.findTicketById("ticket-1"))
         .thenReturn(
             Optional.of(
                 new TicketRecord(
@@ -155,10 +167,23 @@ class MatchmakingServiceTest {
 
     assertThatThrownBy(() -> service.cancelTicket("ticket-1", "user-1"))
         .isInstanceOf(TicketAccessDeniedException.class);
+    verify(repository, never()).cancelTicket("ticket-1");
   }
 
   @Test
   void cancelTicketReturnsCancelledResponse() {
+    when(repository.findTicketById("ticket-1"))
+        .thenReturn(
+            Optional.of(
+                new TicketRecord(
+                    "ticket-1",
+                    "user-1",
+                    MatchMode.CASUAL,
+                    TicketStatus.QUEUED,
+                    Instant.parse("2026-02-24T12:00:00Z"),
+                    Instant.parse("2026-02-24T12:01:00Z"),
+                    "{}",
+                    null)));
     when(repository.cancelTicket("ticket-1"))
         .thenReturn(
             Optional.of(

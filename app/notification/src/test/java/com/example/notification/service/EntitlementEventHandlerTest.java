@@ -1,5 +1,5 @@
 /*
- * どこで: NotificationEventHandler のユニットテスト
+ * どこで: EntitlementEventHandler のユニットテスト
  * 何を: 冪等性・通知レコード生成・例外伝播を検証する
  * なぜ: 重複登録や不正な保存を防ぐため
  */
@@ -36,7 +36,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class NotificationEventHandlerTest {
+class EntitlementEventHandlerTest {
 
   private static final Instant FIXED_NOW = Instant.parse("2026-01-17T01:02:03Z");
   private static final String EVENT_ID = "11111111-1111-1111-1111-111111111111";
@@ -60,14 +60,14 @@ class NotificationEventHandlerTest {
 
   @Captor private ArgumentCaptor<EntitlementEventPayload> payloadCaptor;
 
-  private NotificationEventHandler handler;
+  private EntitlementEventHandler handler;
 
   @BeforeEach
   void setUp() {
     // 時刻に依存する処理が揺れないよう固定クロックを注入する
     final Clock clock = Clock.fixed(FIXED_NOW, ZoneOffset.UTC);
     handler =
-        new NotificationEventHandler(
+        new EntitlementEventHandler(
             processedEventRepository, notificationRepository, objectMapper, clock);
   }
 

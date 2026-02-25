@@ -1,3 +1,6 @@
+spring:
+  config.activate.on-profile: test
+
 nats:
   enabled: false
 

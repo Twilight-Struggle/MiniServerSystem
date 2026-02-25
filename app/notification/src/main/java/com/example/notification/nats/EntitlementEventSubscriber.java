@@ -6,7 +6,7 @@
 package com.example.notification.nats;
 
 import com.example.notification.config.NotificationNatsProperties;
-import com.example.notification.service.NotificationEventHandler;
+import com.example.notification.service.EntitlementEventHandler;
 import com.example.notification.service.NotificationEventPermanentException;
 import com.example.proto.entitlement.EntitlementEvent;
 import com.google.common.annotations.VisibleForTesting;
@@ -49,7 +49,7 @@ public class EntitlementEventSubscriber {
       justification = "NATS Connection は外部管理の共有リソースで、防御的コピーが不可能なため")
   private final Connection connection;
 
-  private final NotificationEventHandler eventHandler;
+  private final EntitlementEventHandler eventHandler;
   private final NotificationNatsProperties properties;
   private final AtomicBoolean started;
   private Dispatcher dispatcher;
@@ -57,7 +57,7 @@ public class EntitlementEventSubscriber {
 
   public EntitlementEventSubscriber(
       Connection connection,
-      NotificationEventHandler eventHandler,
+      EntitlementEventHandler eventHandler,
       NotificationNatsProperties properties) {
     this.connection = connection;
     this.eventHandler = eventHandler;
