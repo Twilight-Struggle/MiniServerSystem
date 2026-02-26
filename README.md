@@ -47,3 +47,6 @@
 - RDB + KVS
 
 [コンポーネント詳細](docs/review/components.md)
+
+## まだやっていない部分
+[TBD](docs/review/TBD.md)

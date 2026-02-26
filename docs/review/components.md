@@ -22,7 +22,9 @@
 
 ### 実装内容
 - grant/revoke APIでRDB(正本)と outbox に保存
-- outboxからワーカーが作業中であるとclaimしNATSへ送信(時間切れでlease)
+- outboxからワーカーが作業中であるとclaimしNATSへ送信(時間切れでleaseされ再び処理可能に)
+    - SELECT ... FOR UPDATE SKIP LOCKED で未処理行をロックし、PROCESSING + lease_until + locked_by を更新
+    - 送信成功後に SENT へ遷移
 - 一定期間でoutboxをクリーンアップ
 
 ## Notification
@@ -32,6 +34,7 @@
 ### 実装内容
 - NATS からイベントをサブスクライブし、RDBへ
 - RDBを作業中だとclaimしクライアントへ送信(ただのログ)
+- NATSへ2重送信されていてもat-least-once前提に1回となるよう調整
 - RDBを一定期間でクリーンアップ
 
 ## Matchmaking
