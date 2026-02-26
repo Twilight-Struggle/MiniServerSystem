@@ -228,6 +228,16 @@ run_test_script \
   --password "${PASSWORD}"
 
 run_test_script \
+  "oidc-profile-aggregate" \
+  "${SCRIPT_DIR}/tests/oidc-profile-aggregate.sh" \
+  --base-url "${BASE_URL}" \
+  --keycloak-base-url "${KEYCLOAK_BASE_URL}" \
+  --username "${USERNAME}" \
+  --password "${PASSWORD}" \
+  --second-username "${SECOND_USERNAME}" \
+  --second-password "${SECOND_PASSWORD}"
+
+run_test_script \
   "matchmaking-join-idempotency" \
   "${SCRIPT_DIR}/tests/matchmaking-join-idempotency.sh" \
   --base-url "${BASE_URL}" \

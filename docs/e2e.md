@@ -198,6 +198,22 @@
 担保したいリスク:
 - stale ticket による誤マッチ、キュー滞留の長期化。
 
+### E2E-15: Profile 集約APIの本人境界と下流統合整合
+
+目的:
+- `GET /v1/users/{userId}/profile` が本人のみ参照可能で、account/entitlement/matchmaking の統合結果を返すことを確認する。
+
+主な確認内容:
+- ユーザーAで OIDC ログインし、matchmaking ticket を作成する。
+- `GET /v1/users/{userId}/profile?ticketId={ticketId}` が `200` を返す。
+- レスポンスの `account.user_id` と `entitlement.user_id` がユーザーAの `userId` と一致する。
+- レスポンスの `matchmaking.ticket_id` が指定した `ticketId` と一致する。
+- ユーザーAがユーザーBの `profile` を参照すると `403`（`PROFILE_FORBIDDEN`）になる。
+
+担保したいリスク:
+- Profile 集約で本人境界が崩れ、他ユーザー情報を横取りできる障害。
+- account/entitlement/matchmaking の統合ロジック不整合により、フロントへ誤ったプロフィール情報が返る障害。
+
 ## 3. この E2E セットで保証する品質特性
 
 - 可用性前提: テスト開始時点で依存サービスが ready であること。
