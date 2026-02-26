@@ -4,6 +4,26 @@ server:
 spring:
   application:
     name: matchmaking
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+
+nats:
+  enabled: true
+  url: ${NATS_URL:nats://nats:4222}
+  connection-timeout: 5
+
+matchmaking:
+  ticket-ttl: 60s
+  idempotency-ttl: 60s
+  worker-poll-interval: 1s
+  worker-batch-size: 50
+  worker-enabled: true
+  nats:
+    subject: matchmaking.events
+    stream: matchmaking-events
+    duplicate-window: 2m
 
 management:
   endpoints:

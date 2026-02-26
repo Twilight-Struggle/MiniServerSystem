@@ -58,3 +58,14 @@ account:
   patch-user-path: ${ACCOUNT_PATCH_USER_PATH:/users/{userId}}
   user-id-header-name: ${ACCOUNT_USER_ID_HEADER_NAME:X-User-Id}
   user-roles-header-name: ${ACCOUNT_USER_ROLES_HEADER_NAME:X-User-Roles}
+
+matchmaking:
+  base-url: ${MATCHMAKING_BASE_URL:http://matchmaking:80}
+  join-ticket-path: ${MATCHMAKING_JOIN_TICKET_PATH:/v1/matchmaking/queues/{mode}/tickets}
+  get-ticket-path: ${MATCHMAKING_GET_TICKET_PATH:/v1/matchmaking/tickets/{ticketId}}
+  cancel-ticket-path: ${MATCHMAKING_CANCEL_TICKET_PATH:/v1/matchmaking/tickets/{ticketId}}
+  user-id-header-name: ${MATCHMAKING_USER_ID_HEADER_NAME:X-User-Id}
+
+entitlement:
+  base-url: ${ENTITLEMENT_BASE_URL:http://entitlement:80}
+  get-user-entitlements-path: ${ENTITLEMENT_GET_USER_ENTITLEMENTS_PATH:/v1/users/{userId}/entitlements}

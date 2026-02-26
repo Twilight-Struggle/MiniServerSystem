@@ -8,7 +8,9 @@ package com.example.gateway_bff.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.time.Duration;
 import org.junit.jupiter.api.Test;
 
 class GatewayMetricsTest {
@@ -41,5 +43,42 @@ class GatewayMetricsTest {
     assertThat(loginError.count()).isEqualTo(1.0d);
     assertThat(timeout.count()).isEqualTo(1.0d);
     assertThat(badGateway.count()).isEqualTo(1.0d);
+  }
+
+  @Test
+  void recordsProfileAggregateMetrics() {
+    final SimpleMeterRegistry registry = new SimpleMeterRegistry();
+    final GatewayMetrics metrics = new GatewayMetrics(registry);
+
+    metrics.recordProfileAggregateResult("success", "with_ticket");
+    metrics.recordProfileAggregateResult("error", "without_ticket");
+    metrics.recordProfileAggregateDependencyError("entitlement", "ENTITLEMENT_TIMEOUT");
+    metrics.recordProfileAggregateDependencyDuration("account", "success", Duration.ofMillis(50));
+
+    final Counter profileSuccess =
+        registry
+            .get("gateway.profile.aggregate.total")
+            .tags("result", "success", "ticket", "with_ticket")
+            .counter();
+    final Counter profileError =
+        registry
+            .get("gateway.profile.aggregate.total")
+            .tags("result", "error", "ticket", "without_ticket")
+            .counter();
+    final Counter dependencyError =
+        registry
+            .get("gateway.profile.aggregate.dependency.error.total")
+            .tags("dependency", "entitlement", "reason", "ENTITLEMENT_TIMEOUT")
+            .counter();
+    final Timer dependencyDuration =
+        registry
+            .get("gateway.profile.aggregate.dependency.duration")
+            .tags("dependency", "account", "result", "success")
+            .timer();
+
+    assertThat(profileSuccess.count()).isEqualTo(1.0d);
+    assertThat(profileError.count()).isEqualTo(1.0d);
+    assertThat(dependencyError.count()).isEqualTo(1.0d);
+    assertThat(dependencyDuration.count()).isEqualTo(1L);
   }
 }

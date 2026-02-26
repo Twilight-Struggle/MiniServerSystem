@@ -2,3 +2,7 @@ spring:
   config:
     activate:
       on-profile: local
+
+app:
+  security:
+    csrf-enabled: true

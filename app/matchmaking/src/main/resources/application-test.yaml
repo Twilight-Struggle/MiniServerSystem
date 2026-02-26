@@ -1,0 +1,16 @@
+spring:
+  config.activate.on-profile: test
+
+nats:
+  enabled: false
+
+matchmaking:
+  ticket-ttl: 60s
+  idempotency-ttl: 60s
+  worker-poll-interval: 1s
+  worker-batch-size: 50
+  worker-enabled: false
+  nats:
+    subject: matchmaking.events
+    stream: matchmaking-events
+    duplicate-window: 2m

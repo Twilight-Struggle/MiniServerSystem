@@ -117,6 +117,50 @@ build_cookie_header_from_headers() {
   ' "${headers_file}"
 }
 
+merge_cookie_headers() {
+  local header_cookie="$1"
+  local jar_cookie="$2"
+  local combined=""
+
+  if [[ -n "${header_cookie}" ]]; then
+    combined="${header_cookie}"
+  fi
+  if [[ -n "${jar_cookie}" ]]; then
+    if [[ -n "${combined}" ]]; then
+      combined="${combined}; ${jar_cookie}"
+    else
+      combined="${jar_cookie}"
+    fi
+  fi
+
+  # 右側（後勝ち）を優先して cookie 名で重複排除する。
+  printf '%s' "${combined}" | awk -F'; ' '
+    {
+      for (i = 1; i <= NF; i++) {
+        split($i, kv, "=")
+        if (kv[1] != "") {
+          order[++n] = kv[1]
+          value[kv[1]] = $i
+        }
+      }
+    }
+    END {
+      sep = ""
+      for (i = n; i >= 1; i--) {
+        name = order[i]
+        if (!emitted[name]) {
+          out[++m] = value[name]
+          emitted[name] = 1
+        }
+      }
+      for (i = m; i >= 1; i--) {
+        printf "%s%s", sep, out[i]
+        sep = "; "
+      }
+      print ""
+    }'
+}
+
 oidc_login() {
   local base_url="$1"
   local keycloak_base_url="$2"
@@ -201,10 +245,13 @@ oidc_login() {
     rm -f "${keycloak_cookie_jar}" "${login_headers}" "${auth_headers}" "${auth_page_headers}" "${login_page}" "${post_headers}" "${post_body}" || true
     return 1
   fi
-  keycloak_cookie_header="$(build_cookie_header_from_jar "${keycloak_cookie_jar}")"
-  if [[ -z "${keycloak_cookie_header}" ]]; then
-    keycloak_cookie_header="$(build_cookie_header_from_headers "${auth_page_headers}")"
-  fi
+  # Keycloak が http 環境でも Secure 属性付き Cookie を返す場合があるため、
+  # cookie jar だけに依存せず Set-Cookie からも明示的に Cookie ヘッダを組み立てる。
+  keycloak_cookie_header="$(
+    merge_cookie_headers \
+      "$(build_cookie_header_from_headers "${auth_page_headers}")" \
+      "$(build_cookie_header_from_jar "${keycloak_cookie_jar}")"
+  )"
 
   form_action_raw="$(
     perl -0777 -ne 'if (/<form[^>]*id="kc-form-login"[^>]*action="([^"]+)"/s) { print $1; }' "${login_page}"
@@ -221,9 +268,9 @@ oidc_login() {
   status="$(
     curl -sS -o "${post_body}" -D "${post_headers}" -w "%{http_code}" \
     "${keycloak_resolve_args[@]}" \
-    -c "${keycloak_cookie_jar}" -b "${keycloak_cookie_jar}" \
-    -H "Cookie: ${keycloak_cookie_header}" \
+    -c "${keycloak_cookie_jar}" \
     -H "Referer: ${auth_location_local}" \
+    -H "Cookie: ${keycloak_cookie_header}" \
     -H "Content-Type: application/x-www-form-urlencoded" \
     -X POST "${form_action_local}" \
     --data-urlencode "username=${username}" \
@@ -233,6 +280,14 @@ oidc_login() {
   )"
   if [[ "${status}" != "302" && "${status}" != "303" ]]; then
     echo "ERROR: Keycloak login submit returned unexpected status=${status}" >&2
+    echo "debug: auth_location=${auth_location_local}" >&2
+    echo "debug: form_action=${form_action_local}" >&2
+    echo "debug: cookie_header_length=${#keycloak_cookie_header}" >&2
+    local kc_error
+    kc_error="$(perl -0777 -ne 'if (/<span[^>]*id="input-error"[^>]*>(.*?)<\/span>/s) { $x=$1; $x=~s/<[^>]+>//g; $x=~s/\s+/ /g; $x=~s/^ //; $x=~s/ $//; print $x; }' "${post_body}")"
+    if [[ -n "${kc_error}" ]]; then
+      echo "keycloak_error=${kc_error}" >&2
+    fi
     echo "response=$(tr '\n' ' ' < "${post_body}" | head -c 500)" >&2
     rm -f "${keycloak_cookie_jar}" "${login_headers}" "${auth_headers}" "${auth_page_headers}" "${login_page}" "${post_headers}" "${post_body}" || true
     return 1

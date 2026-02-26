@@ -2,6 +2,7 @@ package com.example.gateway_bff.config;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -16,11 +17,20 @@ import org.springframework.security.web.authentication.logout.HttpStatusReturnin
 @Configuration
 public class GatewaySecurityConfig {
   private static final Logger logger = LoggerFactory.getLogger(GatewaySecurityConfig.class);
+  private final boolean csrfEnabled;
+
+  public GatewaySecurityConfig(@Value("${app.security.csrf-enabled:true}") boolean csrfEnabled) {
+    this.csrfEnabled = csrfEnabled;
+  }
 
   @Bean
   SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-    http.csrf(Customizer.withDefaults())
-        .sessionManagement(
+    if (csrfEnabled) {
+      http.csrf(Customizer.withDefaults());
+    } else {
+      http.csrf(csrf -> csrf.disable());
+    }
+    http.sessionManagement(
             session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
         .authorizeHttpRequests(
             auth ->

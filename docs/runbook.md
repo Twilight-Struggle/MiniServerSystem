@@ -18,8 +18,9 @@
 - Gateway-BFF（OIDC login / `/v1/me` / `/v1/users/**`）
 - Account（`/identities:resolve` / `/users/**` / `/admin/**`）
 - Entitlement（API + Outbox Relay）
+- Matchmaking（Queue API + worker）
 - Notification（subscriber + worker + DLQ）
-- 依存: Keycloak / PostgreSQL / NATS JetStream
+- 依存: Keycloak / PostgreSQL / Redis / NATS JetStream
 
 ## 3. インシデント共通ルール
 
@@ -42,7 +43,7 @@
 - ログイン導線、認証済み API、通知配信のどこに影響があるかを分類
 
 3. 詰まり箇所の特定
-- OIDC（Keycloak） / BFF / Account / DB / Outbox / NATS / Notification の順で確認
+- OIDC（Keycloak） / BFF / Account / Matchmaking / Redis / DB / Outbox / NATS / Notification の順で確認
 
 4. 最小復旧
 - 再起動、負荷抑制、接続性回復を優先
@@ -245,6 +246,28 @@ WHERE created_at < NOW() - INTERVAL '10 minutes'
 復旧判定:
 - DLQ の増加が停止
 - FAILED 比率が収束
+
+### 5.8 Matchmaking の time-to-match が悪化する
+
+対象障害:
+- `FM-MM-01`
+- `FM-MM-02`
+- `FM-MM-03`
+
+確認順序:
+1. `mm.time_to_match` の p95 上昇と `mm.queue.depth{mode}`/`mm.queue.oldest_age{mode}` の継続増加を確認
+2. `mm.dependency.error.total{type}` の内訳（`worker_loop`, `time_to_match_*` など）を確認
+3. Matchmaking worker ログの mode 別例外と NATS publish 失敗を確認
+4. Redis 到達性・遅延と NATS stream/subject 設定を確認
+
+初期対応:
+- worker 停滞時はプロセス再起動と worker 間隔/バッチ設定の保守的調整を行う
+- Redis 遅延時は負荷を抑制し、Redis 側の資源逼迫を先に解消する
+- publish 失敗時は NATS 接続設定を復旧し、影響チケットの通知欠損有無を確認する
+
+復旧判定:
+- `mm.time_to_match` の p95 が閾値近傍へ戻る
+- `mm.queue.depth` と `mm.queue.oldest_age` が単調減少へ転じる
 
 ## 6. 復旧定型手順
 

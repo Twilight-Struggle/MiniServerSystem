@@ -89,7 +89,7 @@
 ### 入口 API
 - `GET /login`: Keycloak 認可エンドポイントへ遷移させるための `302`
 - `GET /v1/me`: 認証済みユーザー情報を返す
-- `GET /v1/users/{userId}/profile`: account/entitlement/matchmaking の集約スケルトン
+- `GET /v1/users/{userId}/profile`: account/entitlement/matchmaking の集約API（`ticketId` 指定時に matchmaking を付与）
 
 ### 認証・認可方針
 - Spring Security + `spring-boot-starter-oauth2-client`
@@ -165,6 +165,6 @@
   - `AccountResolveClient` の異常系テスト(401/403/5xx/timeout/invalid response)
 
 ## 既知のギャップ(次フェーズ)
-- `/v1/users/{userId}/profile` はまだプレースホルダー(Map返却)で、実データ集約は未着手
+- `/v1/users/{userId}/profile` は実データ集約へ更新済み（本人のみ参照可）
 - `account` の内部 API 認証は共有トークン方式のため、将来は mTLS/JWT などへ強化余地あり
 - `gateway-bff` から account 呼び出しのリトライ/サーキットブレーカーは未実装

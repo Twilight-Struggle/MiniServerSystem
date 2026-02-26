@@ -1,0 +1,43 @@
+{{- /*
+Where: deploy/helm/miniserversystem-platform/templates/istio-gateway-entitlement-virtualservice.yaml
+What: VirtualService timeout/retry policy for gateway-bff -> entitlement internal calls.
+Why: Bound downstream call latency and retry only idempotent entitlement operation.
+*/ -}}
+{{- if .Values.istio.enabled }}
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: gateway-entitlement-timeout
+spec:
+  hosts:
+    - entitlement.{{ .Release.Namespace }}.svc.cluster.local
+  http:
+    - name: gateway-to-entitlement-get-user-entitlements
+      match:
+        - sourceLabels:
+            app: gateway
+          method:
+            exact: GET
+          uri:
+            regex: ^/v1/users/[^/]+/entitlements$
+      timeout: {{ default "1s" .Values.istio.gatewayToEntitlementTimeout | quote }}
+      retries:
+        attempts: {{ default 2 .Values.istio.gatewayToEntitlementRetry.attempts }}
+        perTryTimeout: {{ default "300ms" .Values.istio.gatewayToEntitlementRetry.perTryTimeout | quote }}
+        retryOn: {{ default "connect-failure,refused-stream,unavailable,cancelled" .Values.istio.gatewayToEntitlementRetry.retryOn | quote }}
+      route:
+        - destination:
+            host: entitlement.{{ .Release.Namespace }}.svc.cluster.local
+            port:
+              number: 80
+    - name: gateway-to-entitlement-default
+      match:
+        - sourceLabels:
+            app: gateway
+      timeout: {{ default "1s" .Values.istio.gatewayToEntitlementTimeout | quote }}
+      route:
+        - destination:
+            host: entitlement.{{ .Release.Namespace }}.svc.cluster.local
+            port:
+              number: 80
+{{- end }}

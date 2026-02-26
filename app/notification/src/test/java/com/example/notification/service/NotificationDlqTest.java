@@ -30,7 +30,7 @@ import org.springframework.test.context.ActiveProfiles;
 @ActiveProfiles("test")
 class NotificationDlqTest extends AbstractPostgresContainerTest {
 
-  @Autowired private NotificationEventHandler eventHandler;
+  @Autowired private EntitlementEventHandler eventHandler;
 
   @Autowired private NotificationDeliveryService deliveryService;
 

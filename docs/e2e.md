@@ -133,6 +133,87 @@
 担保したいリスク:
 - 意図しない API 公開による情報露出や境界破壊。
 
+### E2E-10: Matchmaking Join の冪等性（同一 idempotency_key の再送）
+
+目的:
+- 同一ユーザー・同一 mode・同一 `idempotency_key` で Join を再送しても、同一 ticket が再利用されることを確認する。
+
+主な確認内容:
+- OIDC ログイン済みで `POST /v1/matchmaking/queues/casual/tickets` を 2 回実行する。
+- 両レスポンスの `ticket_id` が一致する。
+- status が不正に遷移しない（少なくとも `QUEUED` または既存状態を維持）。
+
+担保したいリスク:
+- クライアント再送で ticket が重複生成され、キュー公平性や後続通知が破綻する障害。
+
+### E2E-11: Matchmaking Ticket 所有者境界（他ユーザー参照/取消拒否）
+
+目的:
+- チケット所有者以外が `GET/DELETE /v1/matchmaking/tickets/{ticketId}` を実行できないことを確認する。
+
+主な確認内容:
+- ユーザーAで Join して ticket を作成する。
+- ユーザーBで同 ticket に対して `GET` と `DELETE` を実行し、`403` または `404` を確認する。
+
+担保したいリスク:
+- ticket の水平権限昇格、他人の待機状態改ざん（勝手な Cancel）。
+
+### E2E-12: Matchmaking 成立から Notification 永続化までの連携
+
+目的:
+- 2ユーザー Join で MATCHED が成立し、`matchmaking.events` 経由で Notification に反映されることを確認する。
+
+主な確認内容:
+- ユーザーA/B で同一 mode に Join する。
+- 両 ticket が最終的に `MATCHED` を返し、`match_id` が一致する。
+- `notification.notifications` に `type=MatchFound` のレコードが作成される。
+- 対応する `event_id` が `notification.processed_events` に記録される。
+
+担保したいリスク:
+- MatchmakerWorker/Lua/NATS/Notification のどこかでイベントが欠落し、成立通知が届かない障害。
+
+### E2E-13: Cancel の冪等性と再実行安全性
+
+目的:
+- Cancel が複数回呼ばれても副作用が増えず、安定した結果を返すことを確認する。
+
+主な確認内容:
+- Join 後に `DELETE /v1/matchmaking/tickets/{ticketId}` を 2 回以上実行する。
+- いずれも `200` で、最終状態が `CANCELLED` のままであることを確認する。
+- Cancel 済み ticket がマッチ成立に使われていないことを確認する。
+
+担保したいリスク:
+- 通信再送や UI 二重送信で状態遷移が壊れる障害。
+
+### E2E-14: TTL 失効時の EXPIRED 収束
+
+目的:
+- 一定時間マッチしない ticket が `EXPIRED` に収束し、キューから除外されることを確認する。
+
+主な確認内容:
+- 短い `matchmaking.ticket-ttl` 設定下で 1 件だけ Join する。
+- TTL 経過後の `GET /v1/matchmaking/tickets/{ticketId}` が `EXPIRED` または `MATCHMAKING_NOT_FOUND(404)` を返す。
+- 失効 ticket が後続 Join の相手として誤ってマッチしないことを確認する。
+
+担保したいリスク:
+- stale ticket による誤マッチ、キュー滞留の長期化。
+
+### E2E-15: Profile 集約APIの本人境界と下流統合整合
+
+目的:
+- `GET /v1/users/{userId}/profile` が本人のみ参照可能で、account/entitlement/matchmaking の統合結果を返すことを確認する。
+
+主な確認内容:
+- ユーザーAで OIDC ログインし、matchmaking ticket を作成する。
+- `GET /v1/users/{userId}/profile?ticketId={ticketId}` が `200` を返す。
+- レスポンスの `account.user_id` と `entitlement.user_id` がユーザーAの `userId` と一致する。
+- レスポンスの `matchmaking.ticket_id` が指定した `ticketId` と一致する。
+- ユーザーAがユーザーBの `profile` を参照すると `403`（`PROFILE_FORBIDDEN`）になる。
+
+担保したいリスク:
+- Profile 集約で本人境界が崩れ、他ユーザー情報を横取りできる障害。
+- account/entitlement/matchmaking の統合ロジック不整合により、フロントへ誤ったプロフィール情報が返る障害。
+
 ## 3. この E2E セットで保証する品質特性
 
 - 可用性前提: テスト開始時点で依存サービスが ready であること。

@@ -22,6 +22,8 @@ ENTITLEMENT_REMOTE_PORT="80"
 REALM="miniserversystem"
 USERNAME="test"
 PASSWORD="test"
+SECOND_USERNAME="test2"
+SECOND_PASSWORD="test"
 TIMEOUT_SEC="120"
 
 usage() {
@@ -49,6 +51,8 @@ Options:
   --realm <name>          Keycloak realm name (default: ${REALM})
   --username <name>       Keycloak test user (default: ${USERNAME})
   --password <pw>         Keycloak test password (default: ${PASSWORD})
+  --second-username <name> Secondary Keycloak test user (default: ${SECOND_USERNAME})
+  --second-password <pw>   Secondary Keycloak test password (default: ${SECOND_PASSWORD})
   --timeout-sec <sec>     Wait timeout for readiness (default: ${TIMEOUT_SEC})
 EOF
 }
@@ -69,6 +73,8 @@ while [[ $# -gt 0 ]]; do
     --realm) REALM="$2"; shift 2 ;;
     --username) USERNAME="$2"; shift 2 ;;
     --password) PASSWORD="$2"; shift 2 ;;
+    --second-username) SECOND_USERNAME="$2"; shift 2 ;;
+    --second-password) SECOND_PASSWORD="$2"; shift 2 ;;
     --timeout-sec)     TIMEOUT_SEC="$2"; shift 2 ;;
     -h|--help)         usage; exit 0 ;;
     *) echo "Unknown arg: $1"; usage; exit 2 ;;
@@ -118,7 +124,7 @@ dump_diagnostics() {
   fi
 
   # 主要 deploy のログ（必要に応じて増やす）
-  for d in gateway account entitlement matchmaking notification nats; do
+  for d in gateway keycloak account entitlement matchmaking notification nats; do
     echo "--- logs: deploy/${d} (tail=200) ---" >&2
     kubectl -n "${NAMESPACE}" logs "deploy/${d}" --all-containers=true --tail=200 || true
   done
@@ -144,11 +150,11 @@ run_test_script() {
   if ! bash "$@"; then
     echo "ERROR: E2E test failed: ${test_name}" >&2
     echo "--- gateway port-forward log ---" >&2
-    tail -n 200 /tmp/pf.log >&2 || true
+    tail -n 40 /tmp/pf.log >&2 || true
     echo "--- keycloak port-forward log ---" >&2
-    tail -n 200 /tmp/pf-keycloak.log >&2 || true
+    tail -n 40 /tmp/pf-keycloak.log >&2 || true
     echo "--- entitlement port-forward log ---" >&2
-    tail -n 200 /tmp/pf-entitlement.log >&2 || true
+    tail -n 40 /tmp/pf-entitlement.log >&2 || true
     dump_diagnostics
     exit 1
   fi
@@ -220,5 +226,64 @@ run_test_script \
   --keycloak-base-url "${KEYCLOAK_BASE_URL}" \
   --username "${USERNAME}" \
   --password "${PASSWORD}"
+
+run_test_script \
+  "oidc-profile-aggregate" \
+  "${SCRIPT_DIR}/tests/oidc-profile-aggregate.sh" \
+  --base-url "${BASE_URL}" \
+  --keycloak-base-url "${KEYCLOAK_BASE_URL}" \
+  --username "${USERNAME}" \
+  --password "${PASSWORD}" \
+  --second-username "${SECOND_USERNAME}" \
+  --second-password "${SECOND_PASSWORD}"
+
+run_test_script \
+  "matchmaking-join-idempotency" \
+  "${SCRIPT_DIR}/tests/matchmaking-join-idempotency.sh" \
+  --base-url "${BASE_URL}" \
+  --keycloak-base-url "${KEYCLOAK_BASE_URL}" \
+  --username "${USERNAME}" \
+  --password "${PASSWORD}"
+
+run_test_script \
+  "matchmaking-cancel-idempotency" \
+  "${SCRIPT_DIR}/tests/matchmaking-cancel-idempotency.sh" \
+  --base-url "${BASE_URL}" \
+  --keycloak-base-url "${KEYCLOAK_BASE_URL}" \
+  --username "${USERNAME}" \
+  --password "${PASSWORD}"
+
+run_test_script \
+  "matchmaking-ttl-expired" \
+  "${SCRIPT_DIR}/tests/matchmaking-ttl-expired.sh" \
+  --base-url "${BASE_URL}" \
+  --keycloak-base-url "${KEYCLOAK_BASE_URL}" \
+  --username "${USERNAME}" \
+  --password "${PASSWORD}" \
+  --timeout-sec "${TIMEOUT_SEC}"
+
+run_test_script \
+  "matchmaking-ticket-ownership" \
+  "${SCRIPT_DIR}/tests/matchmaking-ticket-ownership.sh" \
+  --base-url "${BASE_URL}" \
+  --keycloak-base-url "${KEYCLOAK_BASE_URL}" \
+  --realm "${REALM}" \
+  --username "${USERNAME}" \
+  --password "${PASSWORD}" \
+  --second-username "${SECOND_USERNAME}" \
+  --second-password "${SECOND_PASSWORD}"
+
+run_test_script \
+  "matchmaking-match-notification-pipeline" \
+  "${SCRIPT_DIR}/tests/matchmaking-match-notification-pipeline.sh" \
+  --base-url "${BASE_URL}" \
+  --keycloak-base-url "${KEYCLOAK_BASE_URL}" \
+  --realm "${REALM}" \
+  --username "${USERNAME}" \
+  --password "${PASSWORD}" \
+  --second-username "${SECOND_USERNAME}" \
+  --second-password "${SECOND_PASSWORD}" \
+  --namespace "${NAMESPACE}" \
+  --timeout-sec "${TIMEOUT_SEC}"
 
 echo "=== All E2E tests passed ==="

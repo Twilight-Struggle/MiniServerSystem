@@ -1,0 +1,23 @@
+// どこで: Matchmaking/Notification 間のイベント定義
+// 何を: マッチ成立イベントのスキーマを定義する
+// なぜ: 送受信契約を proto で固定し、言語非依存に共有するため
+syntax = "proto3";
+
+package com.example.proto;
+
+option java_multiple_files = true;
+option java_package = "com.example.proto.matchmaking";
+option java_outer_classname = "MatchmakingEvents";
+
+message MatchmakingEvent {
+  enum EventType {
+    MATCH_FOUND = 0;
+  }
+
+  string event_id = 1;
+  EventType event_type = 2;
+  string occurred_at = 3;
+  string match_id = 4;
+  string mode = 5;
+  string trace_id = 6;
+}
