@@ -150,11 +150,11 @@ run_test_script() {
   if ! bash "$@"; then
     echo "ERROR: E2E test failed: ${test_name}" >&2
     echo "--- gateway port-forward log ---" >&2
-    tail -n 200 /tmp/pf.log >&2 || true
+    tail -n 40 /tmp/pf.log >&2 || true
     echo "--- keycloak port-forward log ---" >&2
-    tail -n 200 /tmp/pf-keycloak.log >&2 || true
+    tail -n 40 /tmp/pf-keycloak.log >&2 || true
     echo "--- entitlement port-forward log ---" >&2
-    tail -n 200 /tmp/pf-entitlement.log >&2 || true
+    tail -n 40 /tmp/pf-entitlement.log >&2 || true
     dump_diagnostics
     exit 1
   fi

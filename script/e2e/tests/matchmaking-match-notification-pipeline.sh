@@ -150,17 +150,8 @@ dump_status_failure_diagnostics() {
   dump_ticket_debug "user1" "${TICKET_ID_1:-}"
   dump_ticket_debug "user2" "${TICKET_ID_2:-}"
   dump_queue_debug
-  echo "--- kubectl get pods (app in {matchmaking,redis}) ---" >&2
-  kubectl -n "${NAMESPACE}" get pods -l app=matchmaking -o wide >&2 || true
-  kubectl -n "${NAMESPACE}" get pods -l app=redis -o wide >&2 || true
   echo "--- logs: deploy/matchmaking (tail=200) ---" >&2
   kubectl -n "${NAMESPACE}" logs deploy/matchmaking --tail=200 >&2 || true
-  echo "--- env: deploy/matchmaking (MATCHMAKING_*) ---" >&2
-  kubectl -n "${NAMESPACE}" exec deploy/matchmaking -- sh -c 'printenv | sort | grep "^MATCHMAKING_"' >&2 || true
-  echo "--- env: deploy/matchmaking (SPRING_PROFILES_ACTIVE) ---" >&2
-  kubectl -n "${NAMESPACE}" exec deploy/matchmaking -- sh -c 'printenv | sort | grep "^SPRING_PROFILES_ACTIVE="' >&2 || true
-  echo "--- logs: deploy/redis (tail=100) ---" >&2
-  kubectl -n "${NAMESPACE}" logs "deploy/${REDIS_DEPLOYMENT}" -c "${REDIS_CONTAINER}" --tail=100 >&2 || true
 }
 
 extract_match_id_from_status_json() {
