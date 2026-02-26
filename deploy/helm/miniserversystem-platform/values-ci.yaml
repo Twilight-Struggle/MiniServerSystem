@@ -55,7 +55,7 @@ app:
 
   matchmaking:
     enabled: true
-    otelEnabled: false
+    otelEnabled: true
     serviceAccountName: matchmaking
     image: { repository: matchmaking, tag: ci }
     port: 8080

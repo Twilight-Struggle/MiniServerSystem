@@ -63,9 +63,23 @@ SLI-C: レイテンシ（認証済み API の p95）
 - 定義: `/v1/me`, `/v1/users/**` のサーバー処理時間 p95
 - SLO: p95 < 400ms / 28日
 
+SLI-D: Profile Aggregate 成功率（`GET /v1/users/{userId}/profile`）
+- 定義: `成功応答 / 全リクエスト`
+- 成功応答: 2xx
+- 除外: `403 PROFILE_FORBIDDEN`（仕様上の拒否）
+- 失敗応答: 5xx, `502/504`, タイムアウト
+- SLO: 99.9% / 28日
+
+SLI-E: Profile Aggregate レイテンシ（p95）
+- 定義: `GET /v1/users/{userId}/profile` の p95
+- 目標:
+- `ticketId` なし: p95 < 450ms / 28日
+- `ticketId` あり: p95 < 700ms / 28日
+
 補足:
 - 未認証アクセスに対する `401` は仕様どおりのため失敗に含めない
 - `account` 依存障害は `ACCOUNT_BAD_GATEWAY` / `ACCOUNT_TIMEOUT` として失敗計上する
+- `entitlement` / `matchmaking` 依存障害（`ENTITLEMENT_*` / `MATCHMAKING_*`）も失敗計上する
 
 ### 4.2 Account
 
@@ -144,6 +158,7 @@ SLI-D: DLQ 発生件数
 ### 6.1 即時対応（ページ対象）
 - Gateway-BFF 認証済み API 成功率の急低下（5 分窓）
 - Gateway-BFF で `ACCOUNT_BAD_GATEWAY` / `ACCOUNT_TIMEOUT` が連続増加
+- Gateway-BFF で `ENTITLEMENT_BAD_GATEWAY` / `ENTITLEMENT_TIMEOUT` が連続増加
 - Account `POST /identities:resolve` の 5xx 率急増
 - Notification DLQ 発生
 - Notification backlog の継続増加
@@ -179,6 +194,9 @@ SLI-D: DLQ 発生件数
 主要なアプリ固有メトリクス名:
 - `gateway.login.total{result}`: `/login` 導線結果（`redirect` / `error`）
 - `gateway.account.integration.error.total{code}`: account 連携エラー内訳（`ACCOUNT_TIMEOUT` / `ACCOUNT_BAD_GATEWAY` など）
+- `gateway.profile.aggregate.total{result,ticket}`: profile 集約の結果件数（`result=success|error`、`ticket=with_ticket|without_ticket`）
+- `gateway.profile.aggregate.dependency.duration{dependency,result}`: profile 集約内の下流呼び出し時間（`dependency=account|entitlement|matchmaking`）
+- `gateway.profile.aggregate.dependency.error.total{dependency,reason}`: profile 集約内の下流エラー件数
 - `entitlement.command.total{action,result}`: grant/revoke の処理結果件数
 - `entitlement.outbox.publish.delay`: outbox publish 遅延（`created_at -> published_at`）
 - `entitlement.outbox.backlog.age`: outbox claim 時の滞留時間（`now - created_at`）
@@ -198,6 +216,7 @@ HTTP 系 SLI（Gateway-BFF / Account）の成功率・レイテンシは `http.s
 注記:
 - Matchmaking の `SLI-A` は `http.server.requests{uri="/v1/matchmaking/queues/{mode}/tickets"}` を一次指標として集計する。
 - Matchmaking の `SLI-B` は `mm.time_to_match` を一次指標として集計する。
+- `SLI-D/E` は `http.server.requests{uri="/v1/users/{userId}/profile"}` を一次指標にし、`ticketId` 有無と下流内訳は `gateway.profile.aggregate.*` で補完する。
 
 - 構成とデータフロー: `docs/architecture.md`
 - 監視対象と異常パターン: `docs/failure-modes.md`

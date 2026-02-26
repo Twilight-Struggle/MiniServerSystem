@@ -3,6 +3,7 @@ package com.example.gateway_bff.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -21,12 +22,14 @@ class ProfileAggregateServiceTest {
 
   @Test
   void aggregateRejectsBlankUserId() {
-    final ProfileAggregateService service = newService();
+    final GatewayMetrics gatewayMetrics = mock(GatewayMetrics.class);
+    final ProfileAggregateService service = newService(gatewayMetrics);
     assertThatThrownBy(
             () ->
                 service.aggregateByUserId(
                     " ", new AuthenticatedUser("user-1", "ACTIVE", List.of("USER")), null))
         .isInstanceOf(IllegalArgumentException.class);
+    verify(gatewayMetrics).recordProfileAggregateResult("error", "without_ticket");
   }
 
   @Test
@@ -34,8 +37,10 @@ class ProfileAggregateServiceTest {
     final AccountUserClient accountUserClient = mock(AccountUserClient.class);
     final EntitlementClient entitlementClient = mock(EntitlementClient.class);
     final MatchmakingClient matchmakingClient = mock(MatchmakingClient.class);
+    final GatewayMetrics gatewayMetrics = mock(GatewayMetrics.class);
     final ProfileAggregateService service =
-        new ProfileAggregateService(accountUserClient, entitlementClient, matchmakingClient);
+        new ProfileAggregateService(
+            accountUserClient, entitlementClient, matchmakingClient, gatewayMetrics);
     when(accountUserClient.getUser(any(), any()))
         .thenReturn(new UserResponse("user-1", "name", "ja", "ACTIVE", List.of("USER")));
     when(entitlementClient.getUserEntitlements("user-1"))
@@ -56,17 +61,26 @@ class ProfileAggregateServiceTest {
     assertThat(response.account()).containsEntry("user_id", "user-1");
     assertThat(response.entitlement()).containsEntry("user_id", "user-1");
     assertThat(response.matchmaking()).containsEntry("ticket_id", "ticket-1");
+    verify(gatewayMetrics).recordProfileAggregateResult("success", "with_ticket");
+    verify(gatewayMetrics)
+        .recordProfileAggregateDependencyDuration(eq("account"), eq("success"), any());
+    verify(gatewayMetrics)
+        .recordProfileAggregateDependencyDuration(eq("entitlement"), eq("success"), any());
+    verify(gatewayMetrics)
+        .recordProfileAggregateDependencyDuration(eq("matchmaking"), eq("success"), any());
   }
 
   @Test
   void aggregateRejectsOtherUserProfileAccess() {
-    final ProfileAggregateService service = newService();
+    final GatewayMetrics gatewayMetrics = mock(GatewayMetrics.class);
+    final ProfileAggregateService service = newService(gatewayMetrics);
 
     assertThatThrownBy(
             () ->
                 service.aggregateByUserId(
                     "user-2", new AuthenticatedUser("user-1", "ACTIVE", List.of("USER")), null))
         .isInstanceOf(ProfileAccessDeniedException.class);
+    verify(gatewayMetrics).recordProfileAggregateResult("error", "without_ticket");
   }
 
   @Test
@@ -74,8 +88,10 @@ class ProfileAggregateServiceTest {
     final AccountUserClient accountUserClient = mock(AccountUserClient.class);
     final EntitlementClient entitlementClient = mock(EntitlementClient.class);
     final MatchmakingClient matchmakingClient = mock(MatchmakingClient.class);
+    final GatewayMetrics gatewayMetrics = mock(GatewayMetrics.class);
     final ProfileAggregateService service =
-        new ProfileAggregateService(accountUserClient, entitlementClient, matchmakingClient);
+        new ProfileAggregateService(
+            accountUserClient, entitlementClient, matchmakingClient, gatewayMetrics);
     when(accountUserClient.getUser(any(), any()))
         .thenReturn(new UserResponse("user-1", "name", "ja", "ACTIVE", List.of("USER")));
     when(entitlementClient.getUserEntitlements("user-1"))
@@ -87,12 +103,42 @@ class ProfileAggregateServiceTest {
 
     assertThat(response.matchmaking()).isEqualTo(Map.of());
     verify(matchmakingClient, never()).getTicketStatus(any(), any());
+    verify(gatewayMetrics).recordProfileAggregateResult("success", "without_ticket");
   }
 
-  private ProfileAggregateService newService() {
+  @Test
+  void aggregateRecordsDependencyErrorWhenEntitlementFails() {
+    final AccountUserClient accountUserClient = mock(AccountUserClient.class);
+    final EntitlementClient entitlementClient = mock(EntitlementClient.class);
+    final MatchmakingClient matchmakingClient = mock(MatchmakingClient.class);
+    final GatewayMetrics gatewayMetrics = mock(GatewayMetrics.class);
+    final ProfileAggregateService service =
+        new ProfileAggregateService(
+            accountUserClient, entitlementClient, matchmakingClient, gatewayMetrics);
+    when(accountUserClient.getUser(any(), any()))
+        .thenReturn(new UserResponse("user-1", "name", "ja", "ACTIVE", List.of("USER")));
+    when(entitlementClient.getUserEntitlements("user-1"))
+        .thenThrow(
+            new EntitlementIntegrationException(
+                EntitlementIntegrationException.Reason.TIMEOUT, "timeout"));
+
+    assertThatThrownBy(
+            () ->
+                service.aggregateByUserId(
+                    "user-1", new AuthenticatedUser("user-1", "ACTIVE", List.of("USER")), null))
+        .isInstanceOf(EntitlementIntegrationException.class);
+    verify(gatewayMetrics).recordProfileAggregateResult("error", "without_ticket");
+    verify(gatewayMetrics)
+        .recordProfileAggregateDependencyDuration(eq("entitlement"), eq("error"), any());
+    verify(gatewayMetrics)
+        .recordProfileAggregateDependencyError("entitlement", "ENTITLEMENT_TIMEOUT");
+  }
+
+  private ProfileAggregateService newService(GatewayMetrics gatewayMetrics) {
     return new ProfileAggregateService(
         mock(AccountUserClient.class),
         mock(EntitlementClient.class),
-        mock(MatchmakingClient.class));
+        mock(MatchmakingClient.class),
+        gatewayMetrics);
   }
 }

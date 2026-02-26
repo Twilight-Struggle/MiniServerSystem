@@ -3,41 +3,58 @@ package com.example.gateway_bff.service;
 import com.example.gateway_bff.api.response.ProfileAggregateResponse;
 import com.example.gateway_bff.model.AuthenticatedUser;
 import com.example.gateway_bff.service.dto.EntitlementSummaryResponse;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
+@SuppressFBWarnings(
+    value = "THROWS_METHOD_THROWS_RUNTIMEEXCEPTION",
+    justification = "下流例外の型とスタックトレースを保持したまま再送出し、メトリクス記録のみを追加する設計のため")
 public class ProfileAggregateService {
 
   private final AccountUserClient accountUserClient;
   private final EntitlementClient entitlementClient;
   private final MatchmakingClient matchmakingClient;
+  private final GatewayMetrics gatewayMetrics;
 
   public ProfileAggregateResponse aggregateByUserId(
       String userId, AuthenticatedUser requester, String ticketId) {
-    validateUserId(userId);
-    validateRequester(requester);
-    if (!userId.equals(requester.userId())) {
-      throw new ProfileAccessDeniedException("profile access denied");
+    final String ticketTag = resolveTicketTag(ticketId);
+    try {
+      validateUserId(userId);
+      validateRequester(requester);
+      if (!userId.equals(requester.userId())) {
+        throw new ProfileAccessDeniedException("profile access denied");
+      }
+      final var user =
+          measureDependency("account", () -> accountUserClient.getUser(userId, requester));
+      final var entitlements =
+          measureDependency("entitlement", () -> entitlementClient.getUserEntitlements(userId));
+      final Map<String, Object> account = new LinkedHashMap<>();
+      account.put("user_id", user.userId());
+      putIfNotNull(account, "display_name", user.displayName());
+      putIfNotNull(account, "locale", user.locale());
+      putIfNotNull(account, "status", user.status());
+      account.put("roles", user.roles() == null ? List.of() : user.roles());
+      final Map<String, Object> entitlement = new LinkedHashMap<>();
+      entitlement.put("user_id", entitlements.userId());
+      entitlement.put(
+          "entitlements",
+          entitlements.entitlements().stream().map(this::toEntitlementMap).toList());
+      final Map<String, Object> matchmaking = toMatchmaking(ticketId, requester.userId());
+      gatewayMetrics.recordProfileAggregateResult("success", ticketTag);
+      return new ProfileAggregateResponse(account, entitlement, matchmaking);
+    } catch (RuntimeException ex) {
+      gatewayMetrics.recordProfileAggregateResult("error", ticketTag);
+      throw ex;
     }
-    final var user = accountUserClient.getUser(userId, requester);
-    final var entitlements = entitlementClient.getUserEntitlements(userId);
-    final Map<String, Object> account = new LinkedHashMap<>();
-    account.put("user_id", user.userId());
-    putIfNotNull(account, "display_name", user.displayName());
-    putIfNotNull(account, "locale", user.locale());
-    putIfNotNull(account, "status", user.status());
-    account.put("roles", user.roles() == null ? List.of() : user.roles());
-    final Map<String, Object> entitlement = new LinkedHashMap<>();
-    entitlement.put("user_id", entitlements.userId());
-    entitlement.put(
-        "entitlements", entitlements.entitlements().stream().map(this::toEntitlementMap).toList());
-    final Map<String, Object> matchmaking = toMatchmaking(ticketId, requester.userId());
-    return new ProfileAggregateResponse(account, entitlement, matchmaking);
   }
 
   private Map<String, Object> toEntitlementMap(EntitlementSummaryResponse summary) {
@@ -53,7 +70,9 @@ public class ProfileAggregateService {
     if (ticketId == null || ticketId.isBlank()) {
       return Map.of();
     }
-    final var ticket = matchmakingClient.getTicketStatus(ticketId, requesterUserId);
+    final var ticket =
+        measureDependency(
+            "matchmaking", () -> matchmakingClient.getTicketStatus(ticketId, requesterUserId));
     final Map<String, Object> matched = new LinkedHashMap<>();
     if (ticket.matched() != null) {
       putIfNotNull(matched, "match_id", ticket.matched().matchId());
@@ -87,5 +106,37 @@ public class ProfileAggregateService {
     if (value != null) {
       target.put(key, value);
     }
+  }
+
+  private String resolveTicketTag(String ticketId) {
+    return ticketId == null || ticketId.isBlank() ? "without_ticket" : "with_ticket";
+  }
+
+  private <T> T measureDependency(String dependency, Supplier<T> call) {
+    final long start = System.nanoTime();
+    try {
+      final T response = call.get();
+      gatewayMetrics.recordProfileAggregateDependencyDuration(
+          dependency, "success", Duration.ofNanos(System.nanoTime() - start));
+      return response;
+    } catch (RuntimeException ex) {
+      gatewayMetrics.recordProfileAggregateDependencyDuration(
+          dependency, "error", Duration.ofNanos(System.nanoTime() - start));
+      gatewayMetrics.recordProfileAggregateDependencyError(dependency, resolveDependencyReason(ex));
+      throw ex;
+    }
+  }
+
+  private String resolveDependencyReason(RuntimeException ex) {
+    if (ex instanceof AccountIntegrationException accountEx) {
+      return "ACCOUNT_" + accountEx.reason().name();
+    }
+    if (ex instanceof EntitlementIntegrationException entitlementEx) {
+      return "ENTITLEMENT_" + entitlementEx.reason().name();
+    }
+    if (ex instanceof MatchmakingIntegrationException matchmakingEx) {
+      return "MATCHMAKING_" + matchmakingEx.reason().name();
+    }
+    return "UNEXPECTED";
   }
 }
