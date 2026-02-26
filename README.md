@@ -50,3 +50,6 @@
 
 ## まだやっていない部分
 [TBD](docs/review/TBD.md)
+
+## その他設計など
+docs/ に記載

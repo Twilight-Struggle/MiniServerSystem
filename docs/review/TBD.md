@@ -38,3 +38,7 @@
     - matchTwoがemptyならbackoffするなどの工夫が必要
 - expires_at_millis=nilなど壊れたデータが来るとキューからは消えるがチケットは残る→チケットはあるのにマッチしない
     - 異常データはstatus=INVALID等にしてメトリクス化
+
+## インフラ
+- スケーラビリティや、PodDisruptionBudget / Resource requests/limits等のインフラリソース等には触れていない
+- 負荷、障害注入テストはできていない

@@ -67,12 +67,6 @@ PR ごとに
 
 kind クラスターを GitHub Actions で作る Actionが使える
 
-### CD
-コンテナを GHCR に push + マニフェストを更新
-- CIのmain マージなどでghcr.io/<org>/<svc>:<tag> を push
-- PRでdeploy/(Helm values など)の image tag を更新
-- ローカル側は Argo CD 等で GitHub を監視して自動反映
-
 ## ローカルKeycloak手順
 ### 目的
 - Google OIDC の代わりに、ローカルの Keycloak を IdP として使う
@@ -141,11 +135,6 @@ kubectl -n miniserversystem port-forward svc/grafana 3000:3000
 ```
 ブラウザで `http://localhost:3000` を開く（初期ログイン: `admin/admin`）
 
-### 5. OIDC疎通確認(切り分け用)
-以下が 200 で返ることを確認する:
-- `http://keycloak.localhost/realms/miniserversystem/.well-known/openid-configuration`
-- `http://keycloak.localhost/realms/miniserversystem/protocol/openid-connect/certs`
-
 ### CI方針
 - CI環境も Google OIDC ではなく Keycloak を利用する
 - `deploy/helm/miniserversystem-platform/values-ci.yaml` の `OIDC_*` は `keycloak` Service 向けURLで統一する
@@ -163,10 +152,12 @@ kubectl -n miniserversystem port-forward svc/grafana 3000:3000
   - `GET /v1/users/{myUserId}` が `200` を返し、レスポンス `userId` が `myUserId` と一致すること
   - `GET /v1/users/{otherUserId}` が `403`で拒否されること
 
-## Argo CD app-of-app（モノレポ構成）
-### 目的
-- 本リポジトリ単体で「すぐデプロイ可能」な状態を示す
-- 通常の分離（アプリrepo / Argo CD repo）ではなく、ポートフォリオ用途として monorepo で完結させる
+## Argo CD app-of-app（モノレポ構成）(TBD)
+### 将来的CD
+コンテナを GHCR に push + マニフェストを更新
+- CIのmain マージなどでghcr.io/<org>/<svc>:<tag> を push
+- PRでdeploy/(Helm values など)の image tag を更新
+- ローカル側は Argo CD 等で GitHub を監視して自動反映
 
 ### 構成
 - `deploy/argocd/project.yaml`
