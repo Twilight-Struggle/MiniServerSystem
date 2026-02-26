@@ -119,7 +119,28 @@ istio:
     attempts: 2
     perTryTimeout: 3s
     retryOn: connect-failure,refused-stream,unavailable,cancelled
+  gatewayToEntitlementTimeout: 1s
+  gatewayToEntitlementRetry:
+    attempts: 2
+    perTryTimeout: 300ms
+    retryOn: connect-failure,refused-stream,unavailable,cancelled
   gatewayToMatchmakingCircuitBreaker:
+    enabled: true
+    connectionPool:
+      tcp:
+        maxConnections: 100
+        connectTimeout: 1s
+      http:
+        http1MaxPendingRequests: 50
+        maxRequestsPerConnection: 20
+        maxRetries: 3
+    outlierDetection:
+      consecutive5xxErrors: 5
+      interval: 10s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+      minHealthPercent: 0
+  gatewayToEntitlementCircuitBreaker:
     enabled: true
     connectionPool:
       tcp:

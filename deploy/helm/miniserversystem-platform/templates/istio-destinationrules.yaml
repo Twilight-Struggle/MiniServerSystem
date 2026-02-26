@@ -61,4 +61,28 @@ spec:
       maxEjectionPercent: {{ default 50 .Values.istio.gatewayToMatchmakingCircuitBreaker.outlierDetection.maxEjectionPercent }}
       minHealthPercent: {{ default 0 .Values.istio.gatewayToMatchmakingCircuitBreaker.outlierDetection.minHealthPercent }}
 {{- end }}
+{{- if .Values.istio.gatewayToEntitlementCircuitBreaker.enabled }}
+---
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: entitlement-circuit-breaker
+spec:
+  host: entitlement.{{ .Release.Namespace }}.svc.cluster.local
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: {{ default 100 .Values.istio.gatewayToEntitlementCircuitBreaker.connectionPool.tcp.maxConnections }}
+        connectTimeout: {{ default "1s" .Values.istio.gatewayToEntitlementCircuitBreaker.connectionPool.tcp.connectTimeout | quote }}
+      http:
+        http1MaxPendingRequests: {{ default 50 .Values.istio.gatewayToEntitlementCircuitBreaker.connectionPool.http.http1MaxPendingRequests }}
+        maxRequestsPerConnection: {{ default 20 .Values.istio.gatewayToEntitlementCircuitBreaker.connectionPool.http.maxRequestsPerConnection }}
+        maxRetries: {{ default 3 .Values.istio.gatewayToEntitlementCircuitBreaker.connectionPool.http.maxRetries }}
+    outlierDetection:
+      consecutive5xxErrors: {{ default 5 .Values.istio.gatewayToEntitlementCircuitBreaker.outlierDetection.consecutive5xxErrors }}
+      interval: {{ default "10s" .Values.istio.gatewayToEntitlementCircuitBreaker.outlierDetection.interval | quote }}
+      baseEjectionTime: {{ default "30s" .Values.istio.gatewayToEntitlementCircuitBreaker.outlierDetection.baseEjectionTime | quote }}
+      maxEjectionPercent: {{ default 50 .Values.istio.gatewayToEntitlementCircuitBreaker.outlierDetection.maxEjectionPercent }}
+      minHealthPercent: {{ default 0 .Values.istio.gatewayToEntitlementCircuitBreaker.outlierDetection.minHealthPercent }}
+{{- end }}
 {{- end }}

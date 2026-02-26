@@ -223,6 +223,9 @@
 - Istio `VirtualService` で `gateway-bff -> matchmaking` に timeout（既定 `10s`）を設定し、`Matchmaking SLI-B (p95<10s)` の観点で上限を揃える
 - Istio retry は `GET/DELETE /v1/matchmaking/tickets/{ticketId}` の冪等操作に限定し、`POST /v1/matchmaking/queues/{mode}/tickets` には適用しない
 - Istio `DestinationRule` で `gateway-bff -> matchmaking` に connectionPool / outlierDetection を設定し、簡易な CB を mesh 層で有効化する
+- Istio `VirtualService` で `gateway-bff -> entitlement` に timeout（既定 `1s`）を設定し、profile 集約の失敗を早期に返す
+- Istio retry は冪等な `GET /v1/users/{userId}/entitlements` に限定して適用する
+- Istio `DestinationRule` で `gateway-bff -> entitlement` に connectionPool / outlierDetection を設定し、最小限の CB を mesh 層で有効化する
 
 ### 8.4 Matchmaking の収束戦略
 - Join は `mm:idemp:*` により同一 `idempotency_key` を既存 ticket に束ねる
@@ -286,7 +289,7 @@ matchmaking 側:
 ## 11. 既知のギャップ
 
 - `/v1/users/{userId}/profile` は実データ集約済み。`ticketId` 指定時のみ matchmaking status を含める
-- gateway-bff → account / matchmaking のアプリレイヤーCB（Resilience4j 等）は未導入（Istioのtimeout/retry/connectionPool/outlierDetectionは導入済み）
+- gateway-bff → account / entitlement / matchmaking のアプリレイヤーCB（Resilience4j 等）は未導入（Istioのtimeout/retry/connectionPool/outlierDetectionは導入済み）
 - 内部 API は Istio mTLS(STRICT) + AuthorizationPolicy でゼロトラスト化し、共有トークン方式はアプリレイヤーの追加ガードとして併用する
 - Matchmaking のセッション情報生成（peer_user_ids / session payload）は現状プレースホルダーで、対戦接続情報の確定仕様は未反映
 
