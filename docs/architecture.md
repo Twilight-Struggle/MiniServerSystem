@@ -63,7 +63,7 @@
 - `/v1/me` で userId/accountStatus/roles を返却
 - `/v1/users/{userId}` と `/v1/users/{userId}` PATCH を `account` へ委譲
 - `/v1/matchmaking/queues/{mode}/tickets` / `/v1/matchmaking/tickets/{ticketId}` を `matchmaking` へ委譲
-- `/v1/users/{userId}/profile` の集約 API を提供（現時点はスケルトン）
+- `/v1/users/{userId}/profile` の集約 API を提供（account + entitlement + matchmaking）
 
 実装上の重要点:
 - `GatewaySecurityConfig` で `oauth2Login()` を有効化
@@ -285,7 +285,7 @@ matchmaking 側:
 
 ## 11. 既知のギャップ
 
-- `/v1/users/{userId}/profile` は現時点で実データ集約未実装（プレースホルダー）
+- `/v1/users/{userId}/profile` は実データ集約済み。`ticketId` 指定時のみ matchmaking status を含める
 - gateway-bff → account / matchmaking のアプリレイヤーCB（Resilience4j 等）は未導入（Istioのtimeout/retry/connectionPool/outlierDetectionは導入済み）
 - 内部 API は Istio mTLS(STRICT) + AuthorizationPolicy でゼロトラスト化し、共有トークン方式はアプリレイヤーの追加ガードとして併用する
 - Matchmaking のセッション情報生成（peer_user_ids / session payload）は現状プレースホルダーで、対戦接続情報の確定仕様は未反映

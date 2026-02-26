@@ -65,3 +65,7 @@ matchmaking:
   get-ticket-path: ${MATCHMAKING_GET_TICKET_PATH:/v1/matchmaking/tickets/{ticketId}}
   cancel-ticket-path: ${MATCHMAKING_CANCEL_TICKET_PATH:/v1/matchmaking/tickets/{ticketId}}
   user-id-header-name: ${MATCHMAKING_USER_ID_HEADER_NAME:X-User-Id}
+
+entitlement:
+  base-url: ${ENTITLEMENT_BASE_URL:http://entitlement:80}
+  get-user-entitlements-path: ${ENTITLEMENT_GET_USER_ENTITLEMENTS_PATH:/v1/users/{userId}/entitlements}

@@ -9,8 +9,10 @@ import static org.mockito.Mockito.verify;
 
 import com.example.gateway_bff.service.AccountInactiveException;
 import com.example.gateway_bff.service.AccountIntegrationException;
+import com.example.gateway_bff.service.EntitlementIntegrationException;
 import com.example.gateway_bff.service.GatewayMetrics;
 import com.example.gateway_bff.service.MatchmakingIntegrationException;
+import com.example.gateway_bff.service.ProfileAccessDeniedException;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -56,5 +58,31 @@ class GatewayApiExceptionHandlerTest {
 
     verify(metrics).recordAccountIntegrationError("MATCHMAKING_TIMEOUT");
     verify(metrics).recordAccountIntegrationError("MATCHMAKING_BAD_GATEWAY");
+  }
+
+  @Test
+  void handleEntitlementIntegrationRecordsReasonSpecificMetric() {
+    final GatewayMetrics metrics = Mockito.mock(GatewayMetrics.class);
+    final GatewayApiExceptionHandler handler = new GatewayApiExceptionHandler(metrics);
+
+    handler.handleEntitlementIntegration(
+        new EntitlementIntegrationException(
+            EntitlementIntegrationException.Reason.TIMEOUT, "timeout"));
+    handler.handleEntitlementIntegration(
+        new EntitlementIntegrationException(
+            EntitlementIntegrationException.Reason.BAD_GATEWAY, "bad gateway"));
+
+    verify(metrics).recordAccountIntegrationError("ENTITLEMENT_TIMEOUT");
+    verify(metrics).recordAccountIntegrationError("ENTITLEMENT_BAD_GATEWAY");
+  }
+
+  @Test
+  void handleProfileAccessDeniedRecordsMetric() {
+    final GatewayMetrics metrics = Mockito.mock(GatewayMetrics.class);
+    final GatewayApiExceptionHandler handler = new GatewayApiExceptionHandler(metrics);
+
+    handler.handleProfileAccessDenied(new ProfileAccessDeniedException("denied"));
+
+    verify(metrics).recordAccountIntegrationError("PROFILE_FORBIDDEN");
   }
 }
